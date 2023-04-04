@@ -64,4 +64,4 @@ il2cpp_thread_attach
 协议
 -------
 
-使用"Hi I2Hrame"请遵守其使用协议, 详细见 [[LICENSE.txt](LICENSE.txt)](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.text).
+使用"Hi I2Hrame"请遵守其使用协议, 详细见 [LICENSE.txt](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.text).
