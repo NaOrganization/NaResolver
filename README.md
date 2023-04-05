@@ -22,7 +22,7 @@ Hi I2Hrame
 
 ### 如何使用
 
-***(注意！！你必须自行添加IL2cppType.h这个文件，你可以使用[这个工具](https://github.com/djkaty/Il2CppInspector)去获取)***
+***(注意！！你需要现在合适游戏Unity版本的Types)***
 
 **只需要将 'I2Hrame.h' 引入**并你安装一遍框架
 
