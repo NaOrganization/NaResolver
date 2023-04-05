@@ -27,7 +27,7 @@ Hi I2Hrame
 **只需要将 'I2Hrame.h' 引入**并你安装一遍框架
 
 ```cpp
-if(I2Hrame.Setup())
+if(I2Hrame->Setup())
     return false;
 ```
 
@@ -35,11 +35,11 @@ if(I2Hrame.Setup())
 
 ```cpp
 // 获取类
-Il2CppClass* _class = I2Hrame.GetClassEx("assembly", "namespace", "className");
-_class = I2Hrame.GetClass("(assembly)namespace.className");
+Il2CppClass* _class = I2Hrame->GetClassEx("assembly", "namespace", "className");
+_class = I2Hrame->GetClass("(assembly)namespace.className");
 
 // 获取方法
-I2Hrame.GetMethod(_class, "returnType methodName(parameterType1, parameterType2)");
+I2Hrame->GetMethod(_class, "returnType methodName(parameterType1, parameterType2)");
 ```
 
 ***(注意: 获取方法时参数之间的 ',' 后面有一个空格)***
