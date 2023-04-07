@@ -1,5 +1,5 @@
 //**************************************//
-// Hi I2Hrame - Il2Cpp Hack Framework   //
+// Hi I2Hrame - Il2Cpp Plug Framework   //
 // Author: MidTerm                   	//
 // Version: v1.0.1                      //
 // License: MIT                         //
