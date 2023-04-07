@@ -1,6 +1,6 @@
-Hi I2Hrame
+# Hi I2Hrame
 
-"最好的IL2cppHack框架."
+"最好的IL2cpp游戏插件."
 
 ------
 
@@ -13,7 +13,7 @@ Hi I2Hrame
 
 ### 特点
 
-"Hi I2Hrame"是一个由C++语言编写的轻量化的Il2cppHack项目框架
+"Hi I2Hrame"是一个由C++语言编写的轻量化的Il2cpp游戏插件项目框架
 
 "Hi I2Harme"有较好的兼容性，只需要更改IL2cpp版本相对应的数据结构即可兼容到不同的游戏中
 
