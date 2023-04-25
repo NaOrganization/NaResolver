@@ -24,7 +24,7 @@
 
 ### 如何使用
 
-***(注意！！你需要现在合适游戏Unity版本的Types)***
+***(注意！！你需要设置合适游戏Unity版本的Types)***
 
 **只需要将 'I2Hrame.h' 引入**并你安装一遍框架
 
@@ -32,8 +32,6 @@
 if(I2Hrame->Setup())
     return false;
 ```
-
-***(注意: 需要安装一遍I2Harme，否则无法使用其功能！)***
 
 ```cpp
 // 获取类
@@ -66,4 +64,4 @@ il2cpp_thread_attach
 协议
 -------
 
-使用"Hi I2Hrame"请遵守其使用协议, 详细见 [LICENSE.txt](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.txt).
+"Hi I2Hrame"使用MIT协议, 详细见 [LICENSE.txt](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.txt).
