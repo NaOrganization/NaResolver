@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include "../../Types/27.2-2021.1.0-2021.1.99.h"
 #include "../../I2Hrame.h"
 
 int WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
