@@ -16,11 +16,14 @@ public:
 	Il2CppDomain* m_pDomain;
 	std::unordered_map<std::string, Il2CppAssembly*> m_mAssemblies;
 	std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass*>>> m_mClasses;
+	std::unordered_map<std::string, Il2CppType*> m_mTypes;
 	bool Setup();
 	Il2CppClass* GetClassEx(std::string assembly, std::string nameSpace, std::string name);
 	Il2CppClass* GetClass(std::string signature);
 	Il2CppMethodPointer GetMethod(Il2CppClass* pClass, std::string signature);
 	Il2CppType* GetType(std::string signature);
+	Il2CppType* GetType(Il2CppClass* klass);
+	std::string GetStringByIl2Cpp(Il2CppString* str);
 };
 
 inline CI2Hrame* I2Hrame = new CI2Hrame();
@@ -30,6 +33,7 @@ Il2CppAssembly* (*il2cpp_domain_assembly_open)(Il2CppDomain* domain, const char*
 Il2CppClass* (*il2cpp_class_from_name)(Il2CppImage* image, const char* namespaze, const char* name);
 char* (*il2cpp_type_get_name)(const Il2CppType* type);
 Il2CppThread* (*il2cpp_thread_attach)(Il2CppDomain* domain);
+Il2CppString* (*il2cpp_string_new)(const char* str);
 
 namespace Signature
 {
@@ -199,6 +203,8 @@ bool CI2Hrame::Setup()
 		return false;
 	if (!(il2cpp_thread_attach = (Il2CppThread * (*)(Il2CppDomain*))GetProcAddress(moduleHandle, "il2cpp_thread_attach")))
 		return false;
+	if (!(il2cpp_string_new = (Il2CppString * (*)(const char*))GetProcAddress(moduleHandle, "il2cpp_string_new")))
+		return false;
 
 	m_pDomain = il2cpp_domain_get();
 	if (!m_pDomain)
@@ -282,6 +288,8 @@ inline Il2CppMethodPointer CI2Hrame::GetMethod(Il2CppClass* pClass, std::string 
 			continue;
 		if (std::string(il2cpp_type_get_name(pMethod->return_type)).compare(returnType) != 0 && returnType.compare("AUTO") != 0)
 			continue;
+		if (pMethod->parameters_count != parameters.size())
+			continue;
 		bool bParameters = true;
 		for (uint32_t j = 0; j < pMethod->parameters_count; j++)
 		{
@@ -302,19 +310,30 @@ inline Il2CppMethodPointer CI2Hrame::GetMethod(Il2CppClass* pClass, std::string 
 
 inline Il2CppType* CI2Hrame::GetType(std::string signature)
 {
-	struct
-	{
-		void* klass;
-		void* monitor;
-		size_t length;
-		wchar_t string[1024];
-	} string;
-	string.length = signature.length();
-	for (size_t i = 0; i < string.length; i++)
-		string.string[i] = signature[i];
-	static auto func = ((Il2CppType * (*)(void* typeName, MethodInfo * method))
+	if (m_mTypes.find(signature) != m_mTypes.end())
+		return m_mTypes[signature];
+	static auto func = ((Il2CppType * (*)(Il2CppString* typeName, MethodInfo * method))
 		GetMethod(GetClassEx("mscorlib", "System", "Type"), "System.Type GetType(System.String)"));
-	if (!func)
-		return nullptr;
-	return func(&string, nullptr);
+	Il2CppType* result = func(il2cpp_string_new(signature.c_str()), nullptr);
+	return m_mTypes[signature] = result;
+}
+
+inline Il2CppType* CI2Hrame::GetType(Il2CppClass* klass)
+{
+	if (!klass) return nullptr;
+	std::string typeSignature = std::string(klass->name) + ", " + std::string(klass->image->assembly->aname.name);
+	if (strlen(klass->namespaze) > 0)
+		typeSignature = std::string(klass->namespaze) + "." + typeSignature;
+	return GetType(typeSignature);
+}
+
+inline std::string CI2Hrame::GetStringByIl2Cpp(Il2CppString* str)
+{
+	if (!str) return "";
+	std::string result = "";
+	for (int i = 0; i < str->length; i++)
+	{
+		result += (char)str->chars[i];
+	}
+	return result;
 }
