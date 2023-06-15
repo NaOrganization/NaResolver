@@ -1,7 +1,7 @@
 //**************************************//
 // Hi I2Hrame - Il2Cpp Hack Framework   //
 // Author: MidTerm                   	//
-// Version: v1.2.2                      //
+// Version: v1.3                        //
 // License: MIT                         //
 //**************************************//
 
@@ -9,15 +9,27 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <codecvt>
 
 class CI2Hrame
 {
 public:
+	enum class LogLevel
+	{
+		Error,
+		Warnning,
+		Info,
+		Debug,
+		ALL
+	};
+	LogLevel m_LogLevel;
+	HMODULE m_hModule;
 	Il2CppDomain* m_pDomain;
 	std::unordered_map<std::string, Il2CppAssembly*> m_mAssemblies;
 	std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass*>>> m_mClasses;
 	std::unordered_map<std::string, Il2CppType*> m_mTypes;
-	bool Setup();
+
+	bool Setup(bool closeGC = false, LogLevel logLevel = LogLevel::Error);
 	Il2CppClass* GetClassEx(std::string assembly, std::string nameSpace, std::string name);
 	Il2CppClass* GetClass(std::string signature);
 	Il2CppMethodPointer GetMethod(Il2CppClass* pClass, std::string signature);
@@ -34,6 +46,8 @@ Il2CppClass* (*il2cpp_class_from_name)(Il2CppImage* image, const char* namespaze
 char* (*il2cpp_type_get_name)(const Il2CppType* type);
 Il2CppThread* (*il2cpp_thread_attach)(Il2CppDomain* domain);
 Il2CppString* (*il2cpp_string_new)(const char* str);
+void (*il2cpp_gc_disenable)();
+const MethodInfo* (*il2cpp_class_get_methods)(Il2CppClass* klass, void** iter);
 
 namespace Signature
 {
@@ -99,7 +113,7 @@ namespace Signature
 				}
 			}
 		}
-		
+
 		std::string Create(const MethodInfo* method)
 		{
 			// format: returntype methodname(parameter1, parameter2, ...)
@@ -188,28 +202,41 @@ namespace ConfusedTranslate
 	}
 }
 
-bool CI2Hrame::Setup()
+bool CI2Hrame::Setup(bool closeGC, LogLevel logLevel)
 {
-	HMODULE moduleHandle = GetModuleHandleW(L"GameAssembly.dll");
-	if (!moduleHandle)
+	m_LogLevel = logLevel;
+	m_hModule = GetModuleHandleW(L"GameAssembly.dll");
+	if (!m_hModule)
+	{
+		if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] GetModuleHandleW failed.\n");
 		return false;
-	if (!(il2cpp_domain_get = (Il2CppDomain * (*)(void))GetProcAddress(moduleHandle, "il2cpp_domain_get")))
-		return false;
-	if (!(il2cpp_domain_assembly_open = (Il2CppAssembly * (*)(Il2CppDomain*, const char*))GetProcAddress(moduleHandle, "il2cpp_domain_assembly_open")))
-		return false;
-	if (!(il2cpp_class_from_name = (Il2CppClass * (*)(Il2CppImage*, const char*, const char*))GetProcAddress(moduleHandle, "il2cpp_class_from_name")))
-		return false;
-	if (!(il2cpp_type_get_name = (char* (*)(const Il2CppType*))GetProcAddress(moduleHandle, "il2cpp_type_get_name")))
-		return false;
-	if (!(il2cpp_thread_attach = (Il2CppThread * (*)(Il2CppDomain*))GetProcAddress(moduleHandle, "il2cpp_thread_attach")))
-		return false;
-	if (!(il2cpp_string_new = (Il2CppString * (*)(const char*))GetProcAddress(moduleHandle, "il2cpp_string_new")))
-		return false;
+	}
 
-	m_pDomain = il2cpp_domain_get();
-	if (!m_pDomain)
+	il2cpp_domain_get = (Il2CppDomain * (*)(void))GetProcAddress(m_hModule, "il2cpp_domain_get"));
+	il2cpp_domain_assembly_open = (Il2CppAssembly * (*)(Il2CppDomain*, const char*))GetProcAddress(m_hModule, "il2cpp_domain_assembly_open"));
+	il2cpp_class_from_name = (Il2CppClass * (*)(Il2CppImage*, const char*, const char*))GetProcAddress(m_hModule, "il2cpp_class_from_name"));
+	il2cpp_type_get_name = (char* (*)(const Il2CppType*))GetProcAddress(m_hModule, "il2cpp_type_get_name"));
+	il2cpp_thread_attach = (Il2CppThread * (*)(Il2CppDomain*))GetProcAddress(m_hModule, "il2cpp_thread_attach"));
+	il2cpp_string_new = (Il2CppString * (*)(const char*))GetProcAddress(m_hModule, "il2cpp_string_new"));
+	il2cpp_gc_disenable = (void(*)(void))GetProcAddress(m_hModule, "il2cpp_gc_disenable"));
+	il2cpp_class_get_methods = (const MethodInfo * (*)(Il2CppClass*, void**))GetProcAddress(m_hModule, "il2cpp_class_get_methods"));
+
+	if (!il2cpp_domain_get || !il2cpp_domain_assembly_open || !il2cpp_class_from_name || !il2cpp_type_get_name || !il2cpp_thread_attach || !il2cpp_string_new || !il2cpp_gc_disenable || !il2cpp_class_get_methods)
+	{
+		if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] il2cppApi get failed.\n");
 		return false;
+	}
+
+	if (!(m_pDomain = il2cpp_domain_get()))
+	{
+		if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] Domain get failed.\n");
+		return false;
+	}
+	
 	il2cpp_thread_attach(m_pDomain);
+	if (closeGC)
+		il2cpp_gc_disenable();
+	if (m_LogLevel >= LogLevel::Info) printf("[+] [I2Hrame] Setup success.\n");
 	return true;
 }
 
@@ -237,14 +264,16 @@ inline Il2CppClass* CI2Hrame::GetClassEx(std::string _assembly, std::string _nam
 	Il2CppImage* pImage = pAssembly->image;
 	if (!pImage)
 	{
-		printf("[*] [-] (pImage is null) Class: %s\n", signature.c_str());
+		if (m_LogLevel >= LogLevel::Info) printf("[-] [I2Hrame] pImage is null: %s\n", signature.c_str());
+		else if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] pImage is null.\n");
 		return nullptr;
 	}
 
 	Il2CppClass* pClass = il2cpp_class_from_name(pImage, nameSpace.c_str(), name.c_str());
 	if (!pClass)
 	{
-		printf("[*] [-] (pClass is null) Class: %s\n", signature.c_str());
+		if (m_LogLevel >= LogLevel::Info) printf("[-] [I2Hrame] pClass is null: %s\n", signature.c_str());
+		else if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] pClass is null.\n");
 		return nullptr;
 	}
 	if (m_mClasses.find(assembly) == m_mClasses.end())
@@ -257,7 +286,7 @@ inline Il2CppClass* CI2Hrame::GetClassEx(std::string _assembly, std::string _nam
 		m_mClasses[assembly].insert(std::make_pair(nameSpace, std::unordered_map<std::string, Il2CppClass*>()));
 	}
 	m_mClasses[assembly][nameSpace].insert(std::make_pair(signature, pClass));
-	printf("[*] Class: %s\n", signature.c_str());
+	if (m_LogLevel >= LogLevel::Info) printf("[+] [I2Hrame] Class: %s\n", signature.c_str());
 	return pClass;
 }
 
@@ -279,11 +308,11 @@ inline Il2CppMethodPointer CI2Hrame::GetMethod(Il2CppClass* pClass, std::string 
 	Signature::Method::Analysis(signature, &returnType, &name, &parameters);
 	name = ConfusedTranslate::RestoreMethod(Signature::Class::Create(pClass), name);
 
-	for (uint32_t i = 0; i < pClass->method_count; i++)
+	void* iterator = NULL;
+	const MethodInfo* pMethod = NULL;
+
+	while ((pMethod = il2cpp_class_get_methods(pClass, &iterator)) != NULL)
 	{
-		const MethodInfo* pMethod = pClass->methods[i];
-		if (!pMethod)
-			continue;
 		if (std::string(pMethod->name).compare(name) != 0 && returnType.compare("AUTO") != 0)
 			continue;
 		if (std::string(il2cpp_type_get_name(pMethod->return_type)).compare(returnType) != 0 && returnType.compare("AUTO") != 0)
@@ -301,10 +330,11 @@ inline Il2CppMethodPointer CI2Hrame::GetMethod(Il2CppClass* pClass, std::string 
 		}
 		if (!bParameters)
 			continue;
-		printf("[*] Method: %s\n", signature.c_str());
+		if (m_LogLevel >= LogLevel::Info) printf("[+] [I2Hrame] Method: %s\n", signature.c_str());
 		return pMethod->methodPointer;
 	}
-	printf("[*] [-] (Could not find the method) Method: %s\n", signature.c_str());
+	if (m_LogLevel >= LogLevel::Info) printf("[-] [I2Hrame] Could not find the method: %s\n", signature.c_str());
+	else if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] Could not find the method.\n");
 	return nullptr;
 }
 
@@ -312,28 +342,37 @@ inline Il2CppType* CI2Hrame::GetType(std::string signature)
 {
 	if (m_mTypes.find(signature) != m_mTypes.end())
 		return m_mTypes[signature];
-	static auto func = ((Il2CppType * (*)(Il2CppString* typeName, MethodInfo * method))
+	static auto func = ((Il2CppType * (*)(Il2CppString * typeName, MethodInfo * method))
 		GetMethod(GetClassEx("mscorlib", "System", "Type"), "System.Type GetType(System.String)"));
 	Il2CppType* result = func(il2cpp_string_new(signature.c_str()), nullptr);
-	return m_mTypes[signature] = result;
+	if (!result)
+	{
+		if (m_LogLevel >= LogLevel::Info) printf("[-] [I2Hrame] Could not find the type: %s\n", signature.c_str());
+		else if (m_LogLevel >= LogLevel::Error) printf("[-] [I2Hrame] Could not find the type.\n");
+		return nullptr;
+	}
+	m_mTypes[signature] = result;
+	return result;
 }
 
 inline Il2CppType* CI2Hrame::GetType(Il2CppClass* klass)
 {
 	if (!klass) return nullptr;
-	std::string typeSignature = std::string(klass->name) + ", " + std::string(klass->image->assembly->aname.name);
-	if (strlen(klass->namespaze) > 0)
-		typeSignature = std::string(klass->namespaze) + "." + typeSignature;
+	std::string signature = ConfusedTranslate::RestoreKlass(Signature::Class::Create(klass));
+	std::string assembly, nameSpace, name;
+	Signature::Class::Analysis(signature, &assembly, &nameSpace, &name);
+	std::string typeSignature = name + ", " + assembly;
+	if (nameSpace.size() > 0)
+		typeSignature = nameSpace + "." + typeSignature;
 	return GetType(typeSignature);
 }
 
 inline std::string CI2Hrame::GetStringByIl2Cpp(Il2CppString* str)
 {
 	if (!str) return "";
-	std::string result = "";
-	for (int i = 0; i < str->length; i++)
-	{
-		result += (char)str->chars[i];
-	}
-	return result;
+	std::u16string u16str = std::u16string(reinterpret_cast<char16_t*>(str->chars));
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+	return convert.to_bytes(u16str);
 }
+
+
