@@ -10,7 +10,6 @@
 #include <vector>
 #include <unordered_map>
 #include <codecvt>
-#include <iostream>
 
 class CI2Hrame
 {
