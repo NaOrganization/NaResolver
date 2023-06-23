@@ -1,7 +1,7 @@
 //**************************************//
 // Hi I2Hrame - Il2Cpp Hack Framework   //
 // Author: MidTerm                   	//
-// Version: v1.3.2                      //
+// Version: v1.3.2.1                    //
 // License: MIT                         //
 //**************************************//
 
@@ -369,7 +369,7 @@ inline Il2CppMethodPointer CI2Hrame::GetMethod(Il2CppClass* pClass, std::string 
 
 	while ((pMethod = il2cpp_class_get_methods(pClass, &iterator)) != NULL)
 	{
-		if (std::string(pMethod->name).compare(name) != 0 && returnType.compare("AUTO") != 0)
+		if (std::string(pMethod->name).compare(name) != 0 && name.compare("AUTO") != 0)
 			continue;
 		if (std::string(il2cpp_type_get_name(pMethod->return_type)).compare(returnType) != 0 && returnType.compare("AUTO") != 0)
 			continue;
