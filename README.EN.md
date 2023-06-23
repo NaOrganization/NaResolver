@@ -4,8 +4,6 @@
 
 ------
 
-<sub>(**This lib is a free but subject to agreement to use, if your company is using "Hi I2Hrame" please consider contacting me, thanks.**)</sub>
-
 | [The Pitch](#The-Pitch)-[Usage](#Usage)-[How it works](#How-it-works)-[License](#License) |
 | :----------------------------------------------------------: |
 
