@@ -37,7 +37,9 @@
 
 ```cpp
 // 安装例子:
-if(I2Hrame->Setup())
+// p1: 关闭, p2: NaLogger
+// 你必须传入这两个参数，如果你不明白如何使用NaLogger，你看看NaLogger的文档
+if(I2Hrame->Setup(false, g_logger))
     return false;
 ```
 
