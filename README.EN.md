@@ -36,6 +36,8 @@ Just **including** the core file into your project and **install** the frame is 
 
 ```cpp
 // installing's example
+// only one parameter, struct I2HConfig
+// you can pass your want config
 if(I2Hrame->Setup())
     return false;
 ```
