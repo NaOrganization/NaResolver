@@ -37,9 +37,22 @@
 
 ```cpp
 // 安装例子:
-// p1: 关闭, p2: NaLogger
-// 你必须传入这两个参数，如果你不明白如何使用NaLogger，你看看NaLogger的文档
-if(I2Hrame->Setup(false, g_logger))
+// 参数: I2HConfig
+// struct I2HConfig
+// {
+// 	bool disableGC = false;
+//	bool enableLogger = false;
+//
+//	struct LoggerConfig
+//	{
+//		void(*fatal)(std::string, ...);
+//		void(*info)(std::string, ...);
+//		void(*debug)(std::string, ...);
+//		void(*error)(std::string, ...);
+//	} logger;
+//};
+// 传入你需要的配置
+if(I2Hrame->Setup(config))
     return false;
 ```
 
