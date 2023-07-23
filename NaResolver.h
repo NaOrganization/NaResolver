@@ -1,9 +1,13 @@
 //**************************************//
-// Hi NaResolver						//
+// Hi NaResolver			//
 // Author: MidTerm                   	//
-// Version: v1.5                        //
+// Version: v1.5.2                      //
 // License: MIT                         //
 //**************************************//
+
+#if !_HAS_CXX17
+#pragma message("The contents of NaResolver are available only with C++17 or later.")
+#endif
 
 #pragma once
 #include <string>
@@ -11,21 +15,26 @@
 #include <unordered_map>
 #include <codecvt>
 
-Il2CppDomain *(*il2cpp_domain_get)();
-Il2CppAssembly *(*il2cpp_domain_assembly_open)(Il2CppDomain *domain, const char *name);
-Il2CppClass *(*il2cpp_class_from_name)(Il2CppImage *image, const char *namespaze, const char *name);
-char *(*il2cpp_type_get_name)(const Il2CppType *type);
-Il2CppThread *(*il2cpp_thread_attach)(Il2CppDomain *domain);
-Il2CppString *(*il2cpp_string_new)(const char *str);
-void (*il2cpp_gc_disable)();
-const MethodInfo *(*il2cpp_class_get_methods)(Il2CppClass *klass, void **iter);
+#define IL2CPP_FUNCTION(ret, name, params) inline ret(*name) params
 
-#define CATCH_IL2CPP_FUNCTION(name)                                               \
-	name = decltype(name)(GetProcAddress(assemblyModule, #name));                 \
-	if (name == nullptr)                                                          \
-	{                                                                             \
+IL2CPP_FUNCTION(Il2CppDomain *, il2cpp_domain_get, ());
+IL2CPP_FUNCTION(Il2CppAssembly *, il2cpp_domain_assembly_open, (Il2CppDomain * domain, const char *name));
+IL2CPP_FUNCTION(Il2CppClass *, il2cpp_class_from_name, (Il2CppImage * image, const char *namespaze, const char *name));
+IL2CPP_FUNCTION(char *, il2cpp_type_get_name, (const Il2CppType *type));
+IL2CPP_FUNCTION(Il2CppThread *, il2cpp_thread_attach, (Il2CppDomain * domain));
+IL2CPP_FUNCTION(Il2CppString *, il2cpp_string_new, (const char *str));
+IL2CPP_FUNCTION(void, il2cpp_gc_disable, ());
+IL2CPP_FUNCTION(void, il2cpp_thread_detach, (Il2CppThread * thread));
+IL2CPP_FUNCTION(const MethodInfo *, il2cpp_class_get_methods, (Il2CppClass * klass, void **iter));
+
+#undef IL2CPP_FUNCTION
+
+#define CATCH_IL2CPP_FUNCTION(name)                                                  \
+	name = decltype(name)(GetProcAddress(assemblyModule, #name));                    \
+	if (name == nullptr)                                                             \
+	{                                                                                \
 		LogFatal("[NaResolver] il2cppApi get failed (" + std::string(#name) + ")."); \
-		return false;                                                             \
+		return false;                                                                \
 	}
 
 struct NaRConfig
@@ -47,47 +56,48 @@ class NaResolver
 public:
 	HMODULE assemblyModule;
 	Il2CppDomain *domain;
+	Il2CppThread *attachedThread;
 	std::unordered_map<std::string, Il2CppAssembly *> assemblies;
 	std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass *>>> classes;
 	std::unordered_map<std::string, Il2CppType *> types;
-	
-	NaResolver();
-	bool Setup(NaRConfig config);
-	void Destroy();
-	Il2CppClass *GetClassEx(std::string assembly, std::string nameSpace, std::string name);
-	Il2CppClass *GetClass(std::string signature);
-	Il2CppMethodPointer GetMethod(Il2CppClass *klass, std::string signature);
-	Il2CppType *GetType(std::string signature);
-	Il2CppType *GetType(Il2CppClass *klass);
-	std::string GetStringByIl2Cpp(Il2CppString *string);
+
+	inline NaResolver();
+	inline bool Setup(NaRConfig config);
+	inline void Destroy();
+	inline Il2CppClass *GetClassEx(std::string assembly, std::string nameSpace, std::string name);
+	inline Il2CppClass *GetClass(std::string signature);
+	inline Il2CppMethodPointer GetMethod(Il2CppClass *klass, std::string signature);
+	inline Il2CppType *GetType(std::string signature);
+	inline Il2CppType *GetType(Il2CppClass *klass);
+	inline std::string GetStringByIl2Cpp(Il2CppString *string);
 
 private:
-	bool ClassExistsInCache(std::string assembly, std::string nameSpace, std::string name);
-	Il2CppAssembly *GetAssembly(std::string name);
-	bool MethodVerifyParams(const MethodInfo *method, std::vector<std::string> parameters);
+	inline bool ClassExistsInCache(std::string assembly, std::string nameSpace, std::string name);
+	inline Il2CppAssembly *GetAssembly(std::string name);
+	inline bool MethodVerifyParams(const MethodInfo *method, std::vector<std::string> parameters);
 	void (*LogFatal)(std::string, ...);
 	void (*LogInfo)(std::string, ...);
 	void (*LogDebug)(std::string, ...);
 	void (*LogError)(std::string, ...);
 };
 
-inline NaResolver* Il2CppResolver = new NaResolver();
+inline NaResolver *Il2CppResolver = new NaResolver();
 
 namespace Signature
 {
 	namespace Class
 	{
-		std::string Create(std::string assembly, std::string nameSpace, std::string name)
+		inline std::string Create(std::string assembly, std::string nameSpace, std::string name)
 		{
 			return std::string("(") + assembly + ")" + nameSpace + (nameSpace.empty() ? "" : ".") + name;
 		}
 
-		std::string Create(Il2CppClass *klass)
+		inline std::string Create(Il2CppClass *klass)
 		{
 			return Create(klass->image->assembly->aname.name, klass->namespaze, klass->name);
 		}
 
-		void Analysis(std::string signature, std::string *assembly, std::string *nameSpace, std::string *name)
+		inline void Analysis(std::string signature, std::string *assembly, std::string *nameSpace, std::string *name)
 		{
 			*assembly = signature.substr(signature.find("(") + 1, signature.find(")") - signature.find("(") - 1);
 			signature = signature.substr(signature.find(")") + 1);
@@ -98,7 +108,7 @@ namespace Signature
 
 	namespace Method
 	{
-		void Analysis(std::string signature, std::string *returnKlass, std::string *name, std::vector<std::string> *parameters)
+		inline void Analysis(std::string signature, std::string *returnKlass, std::string *name, std::vector<std::string> *parameters)
 		{
 			*returnKlass = signature.substr(0, signature.find(" "));
 			signature = signature.substr(signature.find(" ") + 1);
@@ -132,7 +142,7 @@ namespace Signature
 			parameters->push_back(signature);
 		}
 
-		std::string Create(const MethodInfo *method)
+		inline std::string Create(const MethodInfo *method)
 		{
 			std::string signature = il2cpp_type_get_name(method->return_type) + std::string(" ") + method->name + "(";
 
@@ -167,11 +177,11 @@ namespace ConfusedTranslate
 		std::string confusedName;
 	};
 
-	std::vector<Klass> klass = std::vector<Klass>();
+	inline std::vector<Klass> klass = std::vector<Klass>();
 
-	std::vector<Method> method = std::vector<Method>();
+	inline std::vector<Method> method = std::vector<Method>();
 
-	std::string RestoreKlass(std::string signature)
+	inline std::string RestoreKlass(std::string signature)
 	{
 		std::string assembly, nameSpace, name;
 		Signature::Class::Analysis(signature, &assembly, &nameSpace, &name);
@@ -183,7 +193,7 @@ namespace ConfusedTranslate
 		return signature;
 	}
 
-	std::string RestoreMethod(std::string klassSignature, std::string methodName)
+	inline std::string RestoreMethod(std::string klassSignature, std::string methodName)
 	{
 		std::string assembly, nameSpace, name;
 		Signature::Class::Analysis(klassSignature, &assembly, &nameSpace, &name);
@@ -195,7 +205,7 @@ namespace ConfusedTranslate
 		return methodName;
 	}
 
-	std::string ConvertKlass(std::string signature)
+	inline std::string ConvertKlass(std::string signature)
 	{
 		std::string assembly, nameSpace, name;
 		Signature::Class::Analysis(signature, &assembly, &nameSpace, &name);
@@ -212,9 +222,9 @@ namespace ConfusedTranslate
 NaResolver::NaResolver()
 {
 	domain = nullptr;
-	assemblies = std::unordered_map<std::string, Il2CppAssembly*>();
-	classes = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass*>>>();
-	types = std::unordered_map<std::string, Il2CppType*>();
+	assemblies = std::unordered_map<std::string, Il2CppAssembly *>();
+	classes = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass *>>>();
+	types = std::unordered_map<std::string, Il2CppType *>();
 }
 
 bool NaResolver::ClassExistsInCache(std::string assembly, std::string nameSpace, std::string name)
@@ -281,6 +291,7 @@ bool NaResolver::Setup(NaRConfig config)
 	CATCH_IL2CPP_FUNCTION(il2cpp_thread_attach);
 	CATCH_IL2CPP_FUNCTION(il2cpp_string_new);
 	CATCH_IL2CPP_FUNCTION(il2cpp_gc_disable);
+	CATCH_IL2CPP_FUNCTION(il2cpp_thread_detach);
 	CATCH_IL2CPP_FUNCTION(il2cpp_class_get_methods);
 
 	if (domain = il2cpp_domain_get(), domain == nullptr)
@@ -289,7 +300,7 @@ bool NaResolver::Setup(NaRConfig config)
 		return false;
 	}
 
-	il2cpp_thread_attach(domain);
+	attachedThread = il2cpp_thread_attach(domain);
 	if (config.disableGC)
 		il2cpp_gc_disable();
 
@@ -299,11 +310,16 @@ bool NaResolver::Setup(NaRConfig config)
 
 void NaResolver::Destroy()
 {
+	if (attachedThread != nullptr)
+	{
+		il2cpp_thread_detach(attachedThread);
+		attachedThread = nullptr;
+	}
 	domain = nullptr;
 	assemblies.clear();
 	classes.clear();
 	types.clear();
-	
+
 	LogInfo("[NaResolver] Destroy success.");
 }
 
@@ -430,3 +446,17 @@ inline std::string NaResolver::GetStringByIl2Cpp(Il2CppString *string)
 
 	return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(std::u16string(reinterpret_cast<char16_t *>(string->chars)));
 }
+
+#define STATIC_AREA_OFFSET (sizeof(void *) == 8 ? 0xB8 : 0xC5)
+#define CLASS(assembly, namespaze, klass) \
+	static Il2CppClass *ThisClass() { return Il2CppResolver->GetClassEx(assembly, namespaze, klass); }
+#define MEMBER(klass, name, offset) \
+	struct                          \
+	{                               \
+		char __pad__##name[offset]; \
+		klass name;                 \
+	}
+#define STATIC_MEMBER(klass, name, offset)                                                                                                                 \
+	static klass get_##name() { return *reinterpret_cast<klass *>(*reinterpret_cast<uintptr_t *>((uintptr_t)ThisClass() + STATIC_AREA_OFFSET) + offset); } \
+	static void set_##name(klass value) { *reinterpret_cast<klass *>(*reinterpret_cast<uintptr_t *>((uintptr_t)ThisClass() + STATIC_AREA_OFFSET) + offset) = value; }
+#define METHOD(returnType, parameters, signature) static auto __fn = (returnType(*) parameters)(Il2CppResolver->GetMethod(ThisClass(), signature));
