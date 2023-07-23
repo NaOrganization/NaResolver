@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include "../Types/24.3-2020.1.5-2020.1.10.h"
 #include "../NaResolver.h"
 
 #define LOGGER_FUNCTION(level) ([](std::string m, ...)->void\
