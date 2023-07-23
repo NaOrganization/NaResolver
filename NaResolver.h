@@ -1,8 +1,7 @@
 //**************************************//
 // Hi NaResolver			//
 // Author: MidTerm                   	//
-// Version: v1.0.0                      //
-// Branch: Il2Cpp-Api			//
+// Version: v1.5.4                      //
 // License: MIT                         //
 //**************************************//
 
@@ -16,23 +15,12 @@
 #include <unordered_map>
 #include <codecvt>
 
-typedef void Il2CppDomain;
-typedef void Il2CppAssembly;
-typedef void Il2CppClass;
-typedef void Il2CppThread;
-typedef void Il2CppImage;
-typedef void Il2CppString;
-typedef void MethodInfo;
-typedef void Il2CppType;
-typedef void* Il2CppMethodPointer;
-typedef wchar_t Il2CppChar;
-
 class Il2CppManager
 {
 public:
 	HMODULE assemblyModule;
-	std::unordered_map<std::string, void*> il2cppMethodMap = 
-	{ 
+	std::unordered_map<std::string, void*> il2cppMethodMap =
+	{
 		{ "il2cpp_domain_get", nullptr },
 		{ "il2cpp_domain_assembly_open", nullptr },
 		{ "il2cpp_type_get_name", nullptr },
@@ -70,10 +58,10 @@ public:
 			}
 		}
 	}
-	
+
 	inline Il2CppDomain* GetDomain() { return ((Il2CppDomain * (*)(void))il2cppMethodMap["il2cpp_domain_get"])(); }
 	inline Il2CppAssembly* OpenDomainAssembly(Il2CppDomain* domain, const char* name) { return ((Il2CppAssembly * (*)(Il2CppDomain*, const char*))il2cppMethodMap["il2cpp_domain_assembly_open"])(domain, name); }
-	inline char* GetTypeName(const Il2CppType* type) { return ((char * (*)(const Il2CppType*))il2cppMethodMap["il2cpp_type_get_name"])(type); }
+	inline char* GetTypeName(const Il2CppType* type) { return ((char* (*)(const Il2CppType*))il2cppMethodMap["il2cpp_type_get_name"])(type); }
 	inline Il2CppString* NewString(const char* string) { return ((Il2CppString * (*)(const char*))il2cppMethodMap["il2cpp_string_new"])(string); }
 	inline Il2CppChar* GetChars(Il2CppString* string) { return ((Il2CppChar * (*)(Il2CppString*))il2cppMethodMap["il2cpp_string_chars"])(string); }
 	inline void DisableGC() { ((void(*)(void))il2cppMethodMap["il2cpp_gc_disable"])(); }
@@ -109,14 +97,9 @@ namespace Signature
 			Il2CppAssembly* assembly = il2CppManager.GetImageAssembly(image);
 			if (!assembly)
 				return std::string();
-			int offset = sizeof(void*) + sizeof(uint32_t) + sizeof(int32_t) + sizeof(int32_t);
-			void* assemblyName = *(void**)((uintptr_t*)assembly + offset);
-			if (!assemblyName)
-				return std::string();
-			const char* assemblyNameStr = *(const char**)assemblyName;
-			return Create(assemblyNameStr, il2CppManager.GetClassNamespace(klass), il2CppManager.GetClassName(klass));
+			return Create(assembly->aname.name, il2CppManager.GetClassNamespace(klass), il2CppManager.GetClassName(klass));
 		}
-
+		
 		inline void Analysis(std::string signature, std::string* assembly, std::string* nameSpace, std::string* name)
 		{
 			*assembly = signature.substr(signature.find("(") + 1, signature.find(")") - signature.find("(") - 1);
@@ -169,7 +152,7 @@ namespace Signature
 			int paramCount = il2CppManager.GetMethodParamCount(method);
 			for (int i = 0; i < paramCount; i++)
 			{
-				signature += il2CppManager.GetTypeName(il2CppManager.GetMethodReturnType(method))+ std::string(", ");
+				signature += il2CppManager.GetTypeName(il2CppManager.GetMethodReturnType(method)) + std::string(", ");
 			}
 
 			if (paramCount > 0)
@@ -422,7 +405,7 @@ inline Il2CppMethodPointer NaResolver::GetMethod(Il2CppClass* klass, std::string
 		if (!MethodVerifyParams(method, parameters))
 			continue;
 		LogInfo("[NaResolver] Find method: %s", signature.c_str());
-		return *(void**)method;
+		return method->methodPointer;
 	}
 	LogFatal("[NaResolver] Could not find the method: %s", signature.c_str());
 	return nullptr;
