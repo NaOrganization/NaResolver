@@ -1,7 +1,7 @@
 //**************************************//
-// Hi NaResolver						//
+// Hi NaResolver			//
 // Author: MidTerm                   	//
-// Version: v1.6.1	                    //
+// Version: v1.6.1	                //
 // License: MIT                         //
 //**************************************//
 
@@ -25,6 +25,7 @@ typedef void Il2CppString;
 typedef void MethodInfo;
 typedef void Il2CppType;
 typedef void FieldInfo;
+
 typedef void *Il2CppMethodPointer;
 typedef wchar_t Il2CppChar;
 #endif
