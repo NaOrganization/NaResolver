@@ -1,4 +1,5 @@
 
 *.vsidx
-examples\.vs
-examples\x64
+example/x64
+example/.vs/
+
