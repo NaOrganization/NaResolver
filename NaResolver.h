@@ -1,12 +1,12 @@
 //**************************************//
-// Hi NaResolver			//
+// Hi NaResolver						//
 // Author: MidTerm                   	//
-// Version: v1.5.4                      //
+// Version: v1.6	                    //
 // License: MIT                         //
 //**************************************//
 
 #if !_HAS_CXX17
-#pragma message("The contents of NaResolver are available only with C++17 or later.")
+#error "The contents of NaResolver are available only with C++17 or later."
 #endif
 
 #pragma once
@@ -15,31 +15,67 @@
 #include <unordered_map>
 #include <codecvt>
 
+#if defined(__NARESOLVER_ONLY_API)
+typedef void Il2CppDomain;
+typedef void Il2CppAssembly;
+typedef void Il2CppClass;
+typedef void Il2CppThread;
+typedef void Il2CppImage;
+typedef void Il2CppString;
+typedef void MethodInfo;
+typedef void Il2CppType;
+typedef void FieldInfo;
+typedef void* Il2CppMethodPointer;
+typedef wchar_t Il2CppChar;
+#endif
+
 class Il2CppManager
 {
 public:
 	HMODULE assemblyModule;
 	std::unordered_map<std::string, void*> il2cppMethodMap =
 	{
-		{ "il2cpp_domain_get", nullptr },
-		{ "il2cpp_domain_assembly_open", nullptr },
-		{ "il2cpp_type_get_name", nullptr },
-		{ "il2cpp_thread_attach", nullptr },
-		{ "il2cpp_string_new", nullptr },
-		{ "il2cpp_string_chars", nullptr },
-		{ "il2cpp_gc_disable", nullptr },
-		{ "il2cpp_thread_detach", nullptr },
-		{ "il2cpp_class_get_methods", nullptr },
-		{ "il2cpp_class_from_name", nullptr },
-		{ "il2cpp_assembly_get_image", nullptr },
-		{ "il2cpp_method_get_name", nullptr },
-		{ "il2cpp_method_get_return_type", nullptr },
-		{ "il2cpp_method_get_param_count", nullptr },
-		{ "il2cpp_method_get_param", nullptr },
-		{ "il2cpp_class_get_name", nullptr },
-		{ "il2cpp_class_get_namespace", nullptr },
-		{ "il2cpp_class_get_image", nullptr },
-		{ "il2cpp_image_get_assembly", nullptr },
+		{"il2cpp_domain_get", nullptr},
+		{"il2cpp_domain_assembly_open", nullptr},
+
+		{"il2cpp_type_get_name", nullptr},
+
+		{"il2cpp_thread_attach", nullptr},
+		{"il2cpp_thread_detach", nullptr},
+
+		{"il2cpp_string_new", nullptr},
+		{"il2cpp_string_chars", nullptr},
+		{"il2cpp_string_length", nullptr},
+
+		{"il2cpp_gc_disable", nullptr},
+
+		{"il2cpp_class_get_methods", nullptr},
+		{"il2cpp_class_from_name", nullptr},
+		{"il2cpp_class_get_name", nullptr},
+		{"il2cpp_class_get_namespace", nullptr},
+		{"il2cpp_class_get_image", nullptr},
+		{"il2cpp_class_get_fields", nullptr},
+		{"il2cpp_class_get_parent", nullptr},
+		{"il2cpp_class_get_nested_types", nullptr},
+		{"il2cpp_class_get_flags", nullptr},
+
+		{"il2cpp_assembly_get_image", nullptr},
+
+		{"il2cpp_method_get_name", nullptr},
+		{"il2cpp_method_get_return_type", nullptr},
+		{"il2cpp_method_get_param_count", nullptr},
+		{"il2cpp_method_get_param", nullptr},
+		{"il2cpp_method_get_flags", nullptr},
+		{"il2cpp_method_get_param_name", nullptr},
+
+		{"il2cpp_image_get_assembly", nullptr},
+
+		{"il2cpp_field_get_name", nullptr},
+		{"il2cpp_field_get_flags", nullptr},
+		{"il2cpp_field_get_type", nullptr},
+		{"il2cpp_field_get_offset", nullptr},
+
+		{"il2cpp_type_get_class_or_element_class", nullptr},
 	};
 
 	inline void ImportMethods()
@@ -59,25 +95,47 @@ public:
 		}
 	}
 
-	inline Il2CppDomain* GetDomain() { return ((Il2CppDomain * (*)(void))il2cppMethodMap["il2cpp_domain_get"])(); }
-	inline Il2CppAssembly* OpenDomainAssembly(Il2CppDomain* domain, const char* name) { return ((Il2CppAssembly * (*)(Il2CppDomain*, const char*))il2cppMethodMap["il2cpp_domain_assembly_open"])(domain, name); }
+	inline Il2CppDomain* GetDomain() { return ((Il2CppDomain * (*)(void)) il2cppMethodMap["il2cpp_domain_get"])(); }
+	inline Il2CppAssembly* OpenDomainAssembly(Il2CppDomain* domain, const char* name) { return ((Il2CppAssembly * (*)(Il2CppDomain*, const char*)) il2cppMethodMap["il2cpp_domain_assembly_open"])(domain, name); }
+
 	inline char* GetTypeName(const Il2CppType* type) { return ((char* (*)(const Il2CppType*))il2cppMethodMap["il2cpp_type_get_name"])(type); }
-	inline Il2CppString* NewString(const char* string) { return ((Il2CppString * (*)(const char*))il2cppMethodMap["il2cpp_string_new"])(string); }
-	inline Il2CppChar* GetChars(Il2CppString* string) { return ((Il2CppChar * (*)(Il2CppString*))il2cppMethodMap["il2cpp_string_chars"])(string); }
-	inline void DisableGC() { ((void(*)(void))il2cppMethodMap["il2cpp_gc_disable"])(); }
-	inline Il2CppThread* AttachThread(Il2CppDomain* domain) { return ((Il2CppThread * (*)(Il2CppDomain*))il2cppMethodMap["il2cpp_thread_attach"])(domain); }
-	inline void DetachThread(Il2CppThread* thread) { ((void(*)(Il2CppThread*))il2cppMethodMap["il2cpp_thread_detach"])(thread); }
+
+	inline Il2CppThread* AttachThread(Il2CppDomain* domain) { return ((Il2CppThread * (*)(Il2CppDomain*)) il2cppMethodMap["il2cpp_thread_attach"])(domain); }
+	inline void DetachThread(Il2CppThread* thread) { ((void (*)(Il2CppThread*))il2cppMethodMap["il2cpp_thread_detach"])(thread); }
+
+	inline Il2CppString* NewString(const char* string) { return ((Il2CppString * (*)(const char*)) il2cppMethodMap["il2cpp_string_new"])(string); }
+	inline Il2CppChar* GetChars(Il2CppString* string) { return ((Il2CppChar * (*)(Il2CppString*)) il2cppMethodMap["il2cpp_string_chars"])(string); }
+	inline int32_t GetStringLength(Il2CppString* string) { return ((int32_t(*)(Il2CppString*))il2cppMethodMap["il2cpp_string_length"])(string); }
+
+	inline void DisableGC() { ((void (*)(void))il2cppMethodMap["il2cpp_gc_disable"])(); }
+
 	inline const MethodInfo* GetClassMethods(Il2CppClass* klass, void** iter) { return ((const MethodInfo * (*)(Il2CppClass*, void**))il2cppMethodMap["il2cpp_class_get_methods"])(klass, iter); }
-	inline Il2CppClass* GetClassFromName(Il2CppImage* image, const char* nameSpace, const char* name) { return ((Il2CppClass * (*)(Il2CppImage*, const char*, const char*))il2cppMethodMap["il2cpp_class_from_name"])(image, nameSpace, name); }
-	inline Il2CppImage* GetAssemblyImage(Il2CppAssembly* assembly) { return ((Il2CppImage * (*)(const Il2CppAssembly*))il2cppMethodMap["il2cpp_assembly_get_image"])(assembly); }
+	inline Il2CppClass* GetClassFromName(const Il2CppImage* image, const char* nameSpace, const char* name) { return ((Il2CppClass * (*)(const Il2CppImage*, const char*, const char*)) il2cppMethodMap["il2cpp_class_from_name"])(image, nameSpace, name); }
+	inline const char* GetClassName(Il2CppClass* klass) { return ((const char* (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_name"])(klass); }
+	inline const char* GetClassNamespace(Il2CppClass* klass) { return ((const char* (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_namespace"])(klass); }
+	inline const Il2CppImage* GetClassImage(Il2CppClass* klass) { return ((const Il2CppImage * (*)(Il2CppClass*)) il2cppMethodMap["il2cpp_class_get_image"])(klass); }
+	inline FieldInfo* GetClassFields(Il2CppClass* klass, void** iter) { return ((FieldInfo * (*)(Il2CppClass*, void**))il2cppMethodMap["il2cpp_class_get_fields"])(klass, iter); }
+	inline Il2CppClass* GetClassParent(Il2CppClass* klass) { return ((Il2CppClass * (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_parent"])(klass); }
+	inline Il2CppType* GetClassNestedTypes(Il2CppClass* klass, void** iter) { return ((Il2CppType * (*)(Il2CppClass*, void**))il2cppMethodMap["il2cpp_class_get_nested_types"])(klass, iter); }
+	inline int GetClassFlags(Il2CppClass* klass) { return ((int (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_flags"])(klass); }
+
+	inline const Il2CppImage* GetAssemblyImage(const Il2CppAssembly* assembly) { return ((const Il2CppImage * (*)(const Il2CppAssembly*)) il2cppMethodMap["il2cpp_assembly_get_image"])(assembly); }
+
 	inline const char* GetMethodName(const MethodInfo* method) { return ((const char* (*)(const MethodInfo*))il2cppMethodMap["il2cpp_method_get_name"])(method); }
 	inline const Il2CppType* GetMethodReturnType(const MethodInfo* method) { return ((const Il2CppType * (*)(const MethodInfo*))il2cppMethodMap["il2cpp_method_get_return_type"])(method); }
 	inline uint32_t GetMethodParamCount(const MethodInfo* method) { return ((uint32_t(*)(const MethodInfo*))il2cppMethodMap["il2cpp_method_get_param_count"])(method); }
 	inline const Il2CppType* GetMethodParam(const MethodInfo* method, uint32_t index) { return ((const Il2CppType * (*)(const MethodInfo*, uint32_t))il2cppMethodMap["il2cpp_method_get_param"])(method, index); }
-	inline const char* GetClassName(Il2CppClass* klass) { return ((const char* (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_name"])(klass); }
-	inline const char* GetClassNamespace(Il2CppClass* klass) { return ((const char* (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_namespace"])(klass); }
-	inline Il2CppImage* GetClassImage(Il2CppClass* klass) { return ((Il2CppImage * (*)(Il2CppClass*))il2cppMethodMap["il2cpp_class_get_image"])(klass); }
-	inline Il2CppAssembly* GetImageAssembly(Il2CppImage* image) { return ((Il2CppAssembly * (*)(Il2CppImage*))il2cppMethodMap["il2cpp_image_get_assembly"])(image); }
+	inline uint32_t GetMethodFlags(const MethodInfo* method, uint32_t* iflags) { return ((uint32_t(*)(const MethodInfo*, uint32_t*))il2cppMethodMap["il2cpp_method_get_flags"])(method, iflags); }
+	inline const char* GetMethodParamName(const MethodInfo* method, uint32_t index) { return ((const char* (*)(const MethodInfo*, uint32_t))il2cppMethodMap["il2cpp_method_get_param_name"])(method, index); }
+
+	inline const Il2CppAssembly* GetImageAssembly(const Il2CppImage* image) { return ((const Il2CppAssembly * (*)(const Il2CppImage*)) il2cppMethodMap["il2cpp_image_get_assembly"])(image); }
+
+	inline const char* GetFieldName(FieldInfo* field) { return ((const char* (*)(FieldInfo*))il2cppMethodMap["il2cpp_field_get_name"])(field); }
+	inline int GetFieldFlags(FieldInfo* field) { return ((int(*)(FieldInfo*))il2cppMethodMap["il2cpp_field_get_flags"])(field); }
+	inline const Il2CppType* GetFieldType(FieldInfo* field) { return ((const Il2CppType * (*)(FieldInfo*))il2cppMethodMap["il2cpp_field_get_type"])(field); }
+	inline size_t GetFieldOffset(FieldInfo* field) { return ((size_t(*)(FieldInfo*))il2cppMethodMap["il2cpp_field_get_offset"])(field); }
+
+	inline Il2CppClass* GetTypeClassOrElementClass(const Il2CppType* type) { return ((Il2CppClass * (*)(const Il2CppType*))il2cppMethodMap["il2cpp_type_get_class_or_element_class"])(type); }
 };
 
 namespace Signature
@@ -91,15 +149,20 @@ namespace Signature
 
 		inline std::string Create(Il2CppClass* klass, Il2CppManager il2CppManager)
 		{
-			Il2CppImage* image = il2CppManager.GetClassImage(klass);
+			struct AssemblyStructure
+			{
+				char __pad__[sizeof(void*) + sizeof(uint32_t) + sizeof(int32_t) + sizeof(int32_t)];
+				const char* name;
+			};
+			const Il2CppImage* image = il2CppManager.GetClassImage(klass);
 			if (!image)
 				return std::string();
-			Il2CppAssembly* assembly = il2CppManager.GetImageAssembly(image);
+			const AssemblyStructure* assembly = (AssemblyStructure*)il2CppManager.GetImageAssembly(image);
 			if (!assembly)
 				return std::string();
-			return Create(assembly->aname.name, il2CppManager.GetClassNamespace(klass), il2CppManager.GetClassName(klass));
+			return Create(assembly->name, il2CppManager.GetClassNamespace(klass), il2CppManager.GetClassName(klass));
 		}
-		
+
 		inline void Analysis(std::string signature, std::string* assembly, std::string* nameSpace, std::string* name)
 		{
 			*assembly = signature.substr(signature.find("(") + 1, signature.find(")") - signature.find("(") - 1);
@@ -152,7 +215,7 @@ namespace Signature
 			int paramCount = il2CppManager.GetMethodParamCount(method);
 			for (int i = 0; i < paramCount; i++)
 			{
-				signature += il2CppManager.GetTypeName(il2CppManager.GetMethodReturnType(method)) + std::string(", ");
+				signature += il2CppManager.GetTypeName(il2CppManager.GetMethodParam(method, i)) + std::string(", ");
 			}
 
 			if (paramCount > 0)
@@ -252,9 +315,11 @@ public:
 	inline Il2CppClass* GetClassEx(std::string assembly, std::string nameSpace, std::string name);
 	inline Il2CppClass* GetClass(std::string signature);
 	inline Il2CppMethodPointer GetMethod(Il2CppClass* klass, std::string signature);
+	inline FieldInfo* GetField(Il2CppClass* klass, std::string name);
 	inline Il2CppType* GetType(std::string signature);
 	inline Il2CppType* GetType(Il2CppClass* klass);
 	inline std::string GetStringByIl2Cpp(Il2CppString* string);
+
 private:
 	inline bool ClassExistsInCache(std::string assembly, std::string nameSpace, std::string name);
 	inline Il2CppAssembly* GetAssembly(std::string name);
@@ -285,7 +350,6 @@ inline bool NaResolver::Setup(Config config)
 	{
 		LogFatal = LogInfo = LogDebug = LogError = (decltype(LogFatal))([](std::string, ...) -> void {});
 	}
-
 
 	try
 	{
@@ -345,7 +409,7 @@ inline Il2CppClass* NaResolver::GetClassEx(std::string _assembly, std::string _n
 		return nullptr;
 	}
 
-	Il2CppImage* pImage = il2CppManager.GetAssemblyImage(pAssembly);
+	const Il2CppImage* pImage = il2CppManager.GetAssemblyImage(pAssembly);
 	if (!pImage)
 	{
 		LogError("[NaResolver] pImage is null for %s.", signature.c_str());
@@ -405,10 +469,28 @@ inline Il2CppMethodPointer NaResolver::GetMethod(Il2CppClass* klass, std::string
 		if (!MethodVerifyParams(method, parameters))
 			continue;
 		LogInfo("[NaResolver] Find method: %s", signature.c_str());
-		return method->methodPointer;
+		return *(void**)method;
 	}
 	LogFatal("[NaResolver] Could not find the method: %s", signature.c_str());
 	return nullptr;
+}
+
+inline FieldInfo* NaResolver::GetField(Il2CppClass* klass, std::string name)
+{
+	if (klass == nullptr)
+		return nullptr;
+
+	void* iterator = nullptr;
+	FieldInfo* field = nullptr;
+
+	while ((field = il2CppManager.GetClassFields(klass, &iterator)) != nullptr)
+	{
+		std::string fieldName = il2CppManager.GetFieldName(field);
+		if (fieldName.compare(name) != 0)
+			continue;
+		LogInfo("[NaResolver] Find field: %s", name.c_str());
+		return const_cast<FieldInfo*>(field);
+	}
 }
 
 inline Il2CppType* NaResolver::GetType(std::string signature)
@@ -446,8 +528,15 @@ inline std::string NaResolver::GetStringByIl2Cpp(Il2CppString* string)
 	{
 		return std::string();
 	}
-
-	return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(std::u16string(reinterpret_cast<char16_t*>(il2CppManager.GetChars(string))));
+	char16_t* chars = (char16_t*)il2CppManager.GetChars(string);
+	int len = il2CppManager.GetStringLength(string);
+	int size = WideCharToMultiByte(CP_UTF8, 0, (LPCWCH)chars, len, NULL, 0, NULL, NULL);
+	char* buffer = new char[size + 1];
+	WideCharToMultiByte(CP_UTF8, 0, (LPCWCH)chars, len, buffer, size, NULL, NULL);
+	buffer[size] = '\0';
+	std::string result = std::string(buffer);
+	delete[] buffer;
+	return result;
 }
 
 inline bool NaResolver::ClassExistsInCache(std::string assembly, std::string nameSpace, std::string name)

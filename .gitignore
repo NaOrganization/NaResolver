@@ -1,0 +1,4 @@
+
+*.vsidx
+examples\.vs
+examples\x64

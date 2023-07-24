@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "../Types/24.3-2020.1.5-2020.1.10.h"
+#define __NARESOLVER_ONLY_API
 #include "../NaResolver.h"
 
 #define LOGGER_FUNCTION(level) ([](std::string m, ...)->void\
