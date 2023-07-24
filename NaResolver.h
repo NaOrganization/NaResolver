@@ -1,8 +1,8 @@
 //**************************************//
-// Hi NaResolver						//
+// Hi NaResolver			//
 // Author: MidTerm                   	//
 // Version: v1.5.0                      //
-// Branck: Api							//
+// Branck: Api				//
 // License: MIT                         //
 //**************************************//
 
