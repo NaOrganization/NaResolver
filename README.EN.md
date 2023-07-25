@@ -1,16 +1,15 @@
 # NaResolver
 
-"Lightweight Unity game plugin development framework，Give you a excellent experience."
+"Lightweight UnityGame plugin development framework，Give you a excellent experience."
 
 | [Introduction](#Introduction) - [The Pitch](#The-Pitch) - [Usage](#Usage) - [How it works](#How-it-works) - [License](#License) |
 | :----------------------------------------------------------: |
-|                [English Readme](README.en.md)                |
 
 ### Introduction
 
-**NaResolver**是**Perfect**团队下子项目**NaLibrary**中为插件开发研发的一款轻量化开发框架. 
+**NaResolver** is a lightweight development framework for plugin of UnityGame from the **Perfect Team**'s sub project **"NaLibrary"**
 
-包括**NaResolver**在内的**NaLibrary**项目全部开源并以**MIT**为开源协议.
+**NaLibrary** projects, including **NaResolver**, are all open source and use **MIT** as a license.
 
 ### The Pitch
 
