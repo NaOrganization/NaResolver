@@ -1,76 +1,78 @@
-# Hi I2Hrame
+# NaResolver
 
-"Excellent IL2cpp game plugin development framework."
+"Lightweight Unity game plugin development framework，Give you a excellent experience."
 
-------
-
-| [The Pitch](#The-Pitch)-[Usage](#Usage)-[How it works](#How-it-works)-[License](#License) |
+| [Introduction](#Introduction) - [The Pitch](#The-Pitch) - [Usage](#Usage) - [How it works](#How-it-works) - [License](#License) |
 | :----------------------------------------------------------: |
+|                [English Readme](README.en.md)                |
 
+### Introduction
 
+**NaResolver**是**Perfect**团队下子项目**NaLibrary**中为插件开发研发的一款轻量化开发框架. 
+
+包括**NaResolver**在内的**NaLibrary**项目全部开源并以**MIT**为开源协议.
 
 ### The Pitch
 
-Is a C++ language written by the lightweight Il2cpp game plug-in project framework
+"NaResolver"是一个由C++语言编写的轻量化的UnityEngine游戏插件项目框架
 
-It has good compatibility, only need to change the IL2cpp version of the corresponding data structure can be compatible with different games
+"NaResolver"有强劲兼容性
 
-- Fast setup
-- Good compatibility
-- x64 & x86
+- 快速初始化
+- 较好的兼容性
+- 支持x64与x86
+- 同时拥有 Mono 适配版本
+- 支持 Il2Cpp29+ 版本
 
 ### Usage
 
-**(Pay attention!! You need to set the Types appropriate for the Unity version of your game)**
-
-Just **including** the core file into your project and **install** the frame is ok
+#### 如何安装框架呢？
 
 ```cpp
-// including's example:
-#include <I2Hrame/Types/27.2-2021.1.0-2021.1.99+.h>
-#include <I2Hrame/I2Hrame.h>
-// PS: The version file must be included before the core file
-// How do I select the version file?
-// (27.2-2021.1.0-2021.1.99+) '27.2' is IL2cpp's version, '2021.1.0-2021.1.99+' is unity's version
+// 引入例子 (需要使用Il2CppType时):
+#include <NaResolver/Types/27.2-2021.1.0-2021.1.99+.h>
+#include <NaResolver/NaResolver.h>
+// 注意: 版本文件必须要早于核心文件引入
+
+// 引入例子 (不需要使用Il2CppType时):
+#define __NARESOLVER_ONLY_API
+#include <NaResolver/NaResolver.h>
 ```
 
+`27.2`  : IL2cpp版本
+
+`2021.1.0-2021.1.99+` : UnityEngine版本
+
 ```cpp
-// installing's example
-// only one parameter, struct I2HConfig
-// you can pass your want config
-if(I2Hrame->Setup())
+NaResolver::Config config;
+if(Il2CppResolver->Setup(config))
     return false;
 ```
 
-```cpp
-// Get Class
-Il2CppClass* _class = I2Hrame->GetClassEx("assembly", "namespace", "className");
-_class = I2Hrame->GetClass("(assembly)namespace.className");
+#### 要如何获取类和方法呢？
 
-// Get Method
-I2Hrame->GetMethod(_class, "returnType methodName(parameterType1, parameterType2)");
+```cpp
+// 获取类
+Il2CppClass* _class = Il2CppResolver->GetClassEx("assembly", "namespace", "className");
+_class = Il2CppResolver->GetClass("(assembly)namespace.className");
+
+// 获取方法
+Il2CppResolver->GetMethod(_class, "returnType methodName(parameterType1, parameterType2)");
+
+// 获取字段
+Il2CppResolver->GetField(_class, "fieldName");
 ```
 
-***(Note: Get method parameters with a space after ',')***
+***(注意: 获取方法时参数之间的 ',' 后面有一个空格)***
 
 ### How it works
 
-Almost data and function is running in **GameAssembly.dll** this module.
+通过使用**UnityEngine**引擎在**Runtime**时会暴露**API**的特性来实现获取信息.
 
-SO We just get the IL2cpp give the public function is able to get **THE CLASS**, **THE METHODS**.
+**Il2Cpp**暴露的**API**来源于`GameAssembly.dll`.
 
-When you setup "Hi I2Hrame" I get the public method following.
+**Mono**暴露的**API**来源于`mono-2.0-bdwgc.dll`.
 
-```cpp
-il2cpp_domain_get
-il2cpp_domain_assembly_open
-il2cpp_class_from_name
-il2cpp_type_get_name
-il2cpp_method_get_param_count
-il2cpp_thread_attach
-```
+## 协议
 
-License
--------
-
-Hi I2Hrame is licensed under the MIT License, see [LICENSE.txt](LICENSE.txt) for more information.
+**NaResolver**使用MIT协议, 详细见 [LICENSE.txt](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.txt).
