@@ -77,4 +77,4 @@ Il2CppResolver->GetField(_class, "fieldName");
 协议
 -------
 
-**NaResolver**使用MIT协议, 详细见 [LICENSE.txt](https://github.com/MidTerm-CN/I2Hrame/blob/main/LICENSE.txt).
+**NaResolver**使用MIT协议, 详细见 [LICENSE.txt](LICENSE.txt).
