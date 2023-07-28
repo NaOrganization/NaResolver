@@ -1,7 +1,7 @@
 //**************************************//
 // Hi NaResolver			//
 // Author: MidTerm                   	//
-// Version: v1.6.2	                //
+// Version: v1.6.3	                //
 // License: MIT                         //
 //**************************************//
 
@@ -322,15 +322,17 @@ public:
 	{
 		bool disableGC = false;
 		bool enableLogger = false;
+		bool attachedThread = true;
 
 		struct LoggerConfig
 		{
-			void (*fatal)(std::string, ...) = 0;
-			void (*info)(std::string, ...) = 0;
-			void (*debug)(std::string, ...) = 0;
-			void (*error)(std::string, ...) = 0;
+			void (*fatal)(std::string, ...);
+			void (*info)(std::string, ...);
+			void (*debug)(std::string, ...);
+			void (*error)(std::string, ...);
 		} logger;
 	};
+
 	Il2CppManager il2CppManager;
 	Il2CppDomain* domain;
 	Il2CppThread* attachedThread;
@@ -338,7 +340,7 @@ public:
 	std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass*>>> classes;
 
 	inline NaResolver();
-	inline bool Setup(Config config);
+	inline bool Setup(Config config = NaResolver::Config());
 	inline void Destroy();
 	inline Il2CppClass* GetClassEx(std::string assembly, std::string nameSpace, std::string name);
 	inline Il2CppClass* GetClass(std::string signature);
@@ -363,7 +365,7 @@ inline NaResolver* Il2CppResolver = new NaResolver();
 NaResolver::NaResolver()
 {
 	domain = nullptr;
-	assemblies = std::unordered_map<std::string, const Il2CppAssembly*>();
+	assemblies = std::unordered_map<std::string, Il2CppAssembly*>();
 	classes = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, Il2CppClass*>>>();
 }
 
@@ -394,7 +396,8 @@ inline bool NaResolver::Setup(Config config)
 		return false;
 	}
 
-	attachedThread = il2CppManager.AttachThread(domain);
+	if (config.attachedThread)
+		attachedThread = il2CppManager.AttachThread(domain);
 	if (config.disableGC)
 		il2CppManager.DisableGC();
 
