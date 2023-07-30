@@ -1,7 +1,7 @@
 //**************************************//
-// Hi NaResolver						//
+// Hi NaResolver			//
 // Author: MidTerm                   	//
-// Version: v1.6.4						//
+// Version: v1.6.4			//
 // License: MIT                         //
 //**************************************//
 
