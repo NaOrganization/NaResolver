@@ -15,6 +15,7 @@ int WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
 	if (fdwReason == DLL_PROCESS_ATTACH)
 	{
+		DisableThreadLibraryCalls(hinstDLL);
 		AllocConsole();
 		freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
 		NaResolver::Config config;
@@ -35,6 +36,11 @@ int WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 		klass = Il2CppResolver->GetClass("(UnityEngine.CoreModule)UnityEngine.GameObjct");
 		printf("(Error Demonstration) Class: %p\n", klass);
+
+		Il2CppResolver->Destroy();
+		free(Il2CppResolver);
+		FreeConsole();
+		FreeLibrary(hinstDLL);
 	}
 	return TRUE; // Successful DLL_PROCESS_ATTACH.
 }
