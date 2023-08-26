@@ -10,7 +10,7 @@
 
 ### 介绍
 
-**NaResolver**是**Perfect**团队下子项目**NaLibrary**中为插件开发研发的一款轻量化开发框架. 
+**NaResolver**是为插件开发研发的一款轻量化开发框架. 
 
 包括**NaResolver**在内的**NaLibrary**项目全部开源并以**MIT**为开源协议.
 
