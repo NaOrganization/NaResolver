@@ -1,4 +1,4 @@
-#  NaResolver
+#  NaResolver (This Repository have stopped updating, Just check [new one](https://github.com/NaOrganization/NaResolverV2))
 
 "轻量化的Unity游戏插件开发框架，给你带来极佳的体验."
 
