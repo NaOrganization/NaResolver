@@ -1,77 +1,66 @@
-# NaResolver
+#  NaResolver V2
 
-"Lightweight UnityGame plugin development framework，Give you a excellent experience."
+"Lightweight Unity Game plugin development framework，Give you a excellent experience."
 
-| [Introduction](#Introduction) - [The Pitch](#The-Pitch) - [Usage](#Usage) - [How it works](#How-it-works) - [License](#License) |
-| :----------------------------------------------------------: |
+------
 
 ### Introduction
 
-**NaResolver** is a lightweight development framework for plugin of UnityGame from the **Perfect Team**'s sub project **"NaLibrary"**
+**NaResolver** is a lightweight development framework for plugin development.
 
-**NaLibrary** projects, including **NaResolver**, are all open source and use **MIT** as a license.
+### TODO
+
+- [ ] Simplify Method Invoker related code
 
 ### The Pitch
 
-**NaResolver** is a lightweight development  framework for plugin of UnityGame written in C++ language
+- Lightweight
 
-**NaResolver** has excellent compatibility
-
-- Fast setup
+- Setup easily
 - Excellent compatibility
-- Support x64 and x86
-- Support Mono by other branch
-- Support Il2Cpp29 version 
+- Support Mono and Il2Cpp **(New)**
 
 ### Usage
 
-#### How to setup？
+####  How to setup？
 
 ```cpp
-// example (with Il2CppTypes):
-#include <NaResolver/Types/27.2-2021.1.0-2021.1.99+.h>
+#define NA_RESOLVER_STRING_XOR _xor_ // if you need use string xor
 #include <NaResolver/NaResolver.h>
-// Attention: The type file must to include earlier than core file.
 
-// example2 (without Il2CppTypes):
-#define __NARESOLVER_ONLY_API
-#include <NaResolver/NaResolver.h>
+using namespace NaOrganization::MidTerm;
+
+Simplify xxx related code
+
+...main()
+{
+	if (UnityResolver.Setup())
+        printf("Setup successfully!");
+}
 ```
 
-`27.2`  : Il2Cpp version
-
-`2021.1.0-2021.1.99+` : UnityEngine version
+#### How to get class, method？
 
 ```cpp
-NaResolver::Config config;
-if(Il2CppResolver->Setup(config))
-    return false;
+// class
+NaResolver::Class* klass = UnityResolver.GetClass("assembly", "namespace", "className");
+
+// method
+UnityResolver.GetMethod(klass, "returnType", "methodName", {"parameterType1", "parameterType2"});
 ```
 
-#### How to get class, method and field?
+#### How to use them
 
 ```cpp
-// Get class
-Il2CppClass* _class = Il2CppResolver->GetClassEx("assembly", "namespace", "className");
-_class = Il2CppResolver->GetClass("(assembly)namespace.className");
+// class
+printf("(NaResolver->GetClass) Class(%p): %p\n", gameObject.type, gameObject.klass);
 
-// Get method
-Il2CppResolver->GetMethod(_class, "returnType methodName(parameterType1, parameterType2)");
-
-// Get field
-Il2CppResolver->GetField(_class, "fieldName");
+// method
+printf("(NaResolver->GetMethod) Method(%p): %p\n", get_transform.method.GetInvokeAddress(), get_transform.method);
+void* __this = nullptr; // fake value for test
+void* result = NaApiInvoker<void*, void*>(get_transform.method.GetInvokeAddress()).Invoke(__this);
 ```
-
-***(Attention: Get method parameters with a space after ',')***
-
-### How it works
-
-Access to information is achieved by using the **UnityEngine** engine that exposes the **API** at **Runtime**.
-
-**Il2Cpp** Exposed **API** from `GameAssembly.dll`.
-
-**Mono** Exposed **API** from `mono-2.0-bdwgc.dll`.
 
 ## License
 
-**NaResolver** is licensed under the MIT License, see [LICENSE.txt](LICENSE.txt) for more information.
+**NaResolver** is licensed under the GPL3.0 License, see [LICENSE.txt](LICENSE.txt) for more information.
