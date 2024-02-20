@@ -14,10 +14,14 @@
 
 ### The Pitch
 
+- "C# String" convert to STL string easily
+
 - Lightweight
 
 - Setup easily
+
 - Excellent compatibility
+
 - Support Mono and Il2Cpp **(New)**
 
 ### Usage
