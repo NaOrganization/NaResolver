@@ -1,10 +1,13 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: MidTerm						//
-// Version: v2.1.3						//
+// Version: v2.1.4						//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v2.1.4:
+// 1. Fixup some visible bus
+// 2. Change the logic of setting and getting the fields
 // Release v2.1.3:
 // 1. Remove the exception
 // 2. Fixup some visible bus
@@ -40,7 +43,7 @@
 #define NA_RESOLVER_STRING_XOR
 #endif
 
-#undef FIELD_OFFSET
+#undef GetObject
 #undef RegisterClass
 #undef TEXT
 
@@ -117,6 +120,15 @@ namespace VmGeneralType
 		static HMODULE GetModule();
 	};
 
+	class Object
+	{
+	public:
+		void* object = NULL;
+		Object() {}
+		Object(void* object) : object(object) {}
+		operator void* const () { return object; }
+	};
+
 	class Type
 	{
 	public:
@@ -126,6 +138,8 @@ namespace VmGeneralType
 		operator void* const () { return type; }
 
 		std::string GetName() const;
+
+		VmGeneralType::Object GetObject() const;
 	};
 
 	class Method
@@ -159,6 +173,20 @@ namespace VmGeneralType
 		Field(void* fieldInfo) : fieldInfo(fieldInfo) {}
 
 		uint32_t GetOffset() const;
+
+		//DO_API(void, il2cpp_field_get_value, (Il2CppObject* obj, FieldInfo* field, void* value));
+		//DO_API(void, il2cpp_field_set_value, (Il2CppObject* obj, FieldInfo* field, void* value));
+		//DO_API(void, il2cpp_field_static_get_value, (FieldInfo* field, void* value));
+		//DO_API(void, il2cpp_field_static_set_value, (FieldInfo* field, void* value));
+		//DO_API(void, il2cpp_field_set_value_object, (Il2CppObject* instance, FieldInfo* field, Il2CppObject* value));
+
+		void GetValue(Object object, void* value);
+
+		void SetValue(Object object, void* value);
+
+		void GetStaticValue(void* value);
+
+		void SetStaticValue(void* value);
 	};
 
 	class Class
@@ -285,6 +313,12 @@ namespace VmGeneralType
 		return type_get_name(type);
 	}
 
+	VmGeneralType::Object Type::GetObject() const
+	{
+		static auto object_new = VmMethodInvoker<void*, void*>(TEXT("il2cpp_type_get_object"), TEXT("mono_type_get_object"));
+		return object_new(type);
+	}
+
 	void* Method::GetSignatureForMono() const
 	{
 		static auto method_get_signature = VmMethodInvoker<void*, void*>(TEXT("mono_method_signature"));
@@ -396,6 +430,30 @@ namespace VmGeneralType
 	{
 		static auto field_get_offset = VmMethodInvoker<uint32_t, void*>(TEXT("il2cpp_field_get_offset"), TEXT("mono_field_get_offset"));
 		return field_get_offset(fieldInfo);
+	}
+
+	void Field::GetValue(Object object, void* value)
+	{
+		static auto field_get_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("il2cpp_field_get_value"), TEXT("mono_field_get_value"));
+		field_get_value(object, fieldInfo, value);
+	}
+
+	void Field::SetValue(Object object, void* value)
+	{
+		static auto field_set_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("il2cpp_field_set_value"), TEXT("mono_field_set_value"));
+		field_set_value(object, fieldInfo, value);
+	}
+
+	void Field::GetStaticValue(void* value)
+	{
+		static auto field_static_get_value = VmMethodInvoker<void, void*, void*>(TEXT("il2cpp_field_static_get_value"), TEXT("mono_field_static_get_value"));
+		field_static_get_value(fieldInfo, value);
+	}
+
+	void Field::SetStaticValue(void* value)
+	{
+		static auto field_static_set_value = VmMethodInvoker<void, void*, void*>(TEXT("il2cpp_field_static_set_value"), TEXT("mono_field_static_set_value"));
+		field_static_set_value(fieldInfo, value);
 	}
 
 	std::string Image::GetName() const
@@ -668,158 +726,148 @@ NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeNam
 		return naResolverInstance.GetClass(assemblyName, namespaceName, className); \
 	}
 
-#define FIELD_OFFSET(name) ThisClass().klass.GetField(#name).GetOffset()
-#define BACKING_FIELD_OFFSET(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR("<" #name ">k__BackingField")).GetOffset()
+#define GET_FIELDT(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR(#name))
+#define GET_BACKING_FIELD(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR("<" #name ">k__BackingField"))
 
-#define FIELD_GET(type, name) \
+#define FIELD_GETTER(type, name) \
 	type get_##name() \
 	{ \
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		return *(type*)((uint8_t*)this + memberOffset); \
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		type value = {}; \
+		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
+		return value; \
 	}
-#define STR_FIELD_GET(name) \
+#define STR_FIELD_GETTER(name) \
 	std::string get_##name()\
 	{\
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		return VmGeneralType::String(*(void**)((uint8_t*)this + memberOffset));\
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		void* value; \
+		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
+		return ((VmGeneralType::String)value);\
 	}
-#define BACKING_FIELD_GET(type, name)\
+#define BACKING_FIELD_GETTER(type, name)\
 	type get_backingField_##name()\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		return *(type*)((uint8_t*)this + memberOffset); \
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		type value = {}; \
+		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
+		return value; \
 	}
-#define BACKING_STR_FIELD_GET(name)\
+#define BACKING_STR_FIELD_GETTER(name)\
 	std::string get_backingField_##name()\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		return VmGeneralType::String(*(void**)((uint8_t*)this + memberOffset));\
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		void* value; \
+		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
+		return ((VmGeneralType::String)value);\
 	}
 
-#define FIELD_SET(type, name) \
+#define FIELD_SETTER(type, name) \
 	void set_##name(type value) \
 	{ \
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		*(type*)((uint8_t*)this + memberOffset) = value; \
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		field.SetValue((VmGeneralType::Object)(void*)this, &value); \
 	}
-#define STR_FIELD_SET(name) \
+#define STR_FIELD_SETTER(name) \
 	void set_##name(VmGeneralType::String value)\
 	{\
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		*(void**)((uint8_t*)this + memberOffset) = value;\
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		field.SetValue((VmGeneralType::Object)(void*)this, value.address);\
 	}
-#define BACKING_FIELD_SET(type, name)\
+#define BACKING_FIELD_SETTER(type, name)\
 	void set_backingField_##name(type value)\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		*(type*)((uint8_t*)this + memberOffset) = value; \
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		field.SetValue((VmGeneralType::Object)(void*)this, &value); \
 	}
-#define BACKING_STR_FIELD_SET(name)\
+#define BACKING_STR_FIELD_SETTER(name)\
 	void set_backingField_##name(VmGeneralType::String value)\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		*(void**)((uint8_t*)this + memberOffset) = value;\
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		field.SetValue((VmGeneralType::Object)(void*)this, value.address);\
 	}
 
 #define FIELD(type, name) \
-	FIELD_GET(type, name) \
-	FIELD_SET(type, name)
+	FIELD_GETTER(type, name) \
+	FIELD_SETTER(type, name)
 #define STR_FIELD(name) \
-	STR_FIELD_GET(name) \
-	STR_FIELD_SET(name)
+	STR_FIELD_GETTER(name) \
+	STR_FIELD_SETTER(name)
 #define BACKING_FIELD(type, name) \
-	BACKING_FIELD_GET(type, name) \
-	BACKING_FIELD_SET(type, name)
+	BACKING_FIELD_GETTER(type, name) \
+	BACKING_FIELD_SETTER(type, name)
 #define BACKING_STR_FIELD(name) \
-	BACKING_STR_FIELD_GET(name) \
-	BACKING_STR_FIELD_SET(name)
+	BACKING_STR_FIELD_GETTER(name) \
+	BACKING_STR_FIELD_SETTER(name)
 
-#define STATIC_AREA_OFFSET (sizeof(void *) * 0x17)
-
-#define STATIC_FIELD_GET(type, name) \
+#define STATIC_FIELD_GETTTER(type, name) \
 	static type get_##name() \
 	{ \
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return {}; \
-		return *(type*)(staticAreaAddress + memberOffset); \
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		type value = {}; \
+		field.GetStaticValue(&value); \
+		return value; \
 	}
-#define STATIC_STR_FIELD_GET(name) \
+#define STATIC_STR_FIELD_GETTER(name) \
 	static std::string get_##name()\
 	{\
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return {}; \
-		return VmGeneralType::String(*(void**)(staticAreaAddress + memberOffset));\
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		void* value; \
+		field.GetStaticValue(&value); \
+		return ((VmGeneralType::String)value);\
 	}
-#define STATIC_BACKING_FIELD_GET(type, name)\
+#define STATIC_BACKING_FIELD_GETTER(type, name)\
 	static type get_backingField_##name()\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return {}; \
-		return *(type*)(staticAreaAddress + memberOffset); \
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		type value = {}; \
+		field.GetStaticValue(&value); \
+		return value; \
 	}
-#define STATIC_BACKING_STR_FIELD_GET(name)\
+#define STATIC_BACKING_STR_FIELD_GETTER(name)\
 	static std::string get_backingField_##name()\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return {}; \
-		return VmGeneralType::String(*(void**)(staticAreaAddress + memberOffset));\
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		void* value; \
+		field.GetStaticValue(&value); \
+		return ((VmGeneralType::String)value);\
 	}
-#define STATIC_FIELD_SET(type, name) \
+#define STATIC_FIELD_SETTER(type, name) \
 	static void set_##name(type value) \
 	{ \
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass .klass+ STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return; \
-		*(type*)(staticAreaAddress + memberOffset) = value; \
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		field.SetStaticValue(&value); \
 	}
-#define STATIC_STR_FIELD_SET(name) \
+#define STATIC_STR_FIELD_SETTER(name) \
 	static void set_##name(VmGeneralType::String value)\
 	{\
-		static int32_t memberOffset = FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return; \
-		*(void**)(staticAreaAddress + memberOffset) = value;\
+		static VmGeneralType::Field field = GET_FIELDT(name); \
+		field.SetStaticValue(value.address);\
 	}
-#define STATIC_BACKING_FIELD_SET(type, name)\
+#define STATIC_BACKING_FIELD_SETTER(type, name)\
 	static void set_backingField_##name(type value)\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return; \
-		*(type*)(staticAreaAddress + memberOffset) = value; \
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		field.SetStaticValue(&value); \
 	}
-#define STATIC_BACKING_STR_FIELD_SET(name)\
+#define STATIC_BACKING_STR_FIELD_SETTER(name)\
 	static void set_backingField_##name(VmGeneralType::String value)\
 	{\
-		static int32_t memberOffset = BACKING_FIELD_OFFSET(name); \
-		uintptr_t staticAreaAddress = *(uintptr_t*)((uint8_t*)ThisClass().klass.klass + STATIC_AREA_OFFSET); \
-		if (staticAreaAddress == NULL) \
-			return; \
-		*(void**)(staticAreaAddress + memberOffset) = value;\
+		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
+		field.SetStaticValue(value.address);\
 	}
 #define STATIC_FIELD(type, name) \
-	STATIC_FIELD_GET(type, name) \
-	STATIC_FIELD_SET(type, name)
+	STATIC_FIELD_GETTER(type, name) \
+	STATIC_FIELD_SETTER(type, name)
 #define STATIC_STR_FIELD(name) \
-	STATIC_STR_FIELD_GET(name) \
-	STATIC_STR_FIELD_SET(name)
+	STATIC_STR_FIELD_GETTER(name) \
+	STATIC_STR_FIELD_SETTER(name)
 #define STATIC_BACKING_FIELD(type, name) \
-	STATIC_BACKING_FIELD_GET(type, name) \
-	STATIC_BACKING_FIELD_SET(type, name)
+	STATIC_BACKING_FIELD_GETTER(type, name) \
+	STATIC_BACKING_FIELD_SETTER(type, name)
 #define STATIC_BACKING_STR_FIELD(name) \
-	STATIC_BACKING_STR_FIELD_GET(name) \
-	STATIC_BACKING_STR_FIELD_SET(name)
+	STATIC_BACKING_STR_FIELD_GETTER(name) \
+	STATIC_BACKING_STR_FIELD_SETTER(name)
 #define METHOD_ADDRESS(returnType, methodName, ...) naResolverInstance.GetMethod(ThisClass(), returnType, methodName, { __VA_ARGS__ }).method.GetInvokeAddress()
 #define METHOD_ADDRESS_WITH_CLASS(parent, returnType, methodName, ...) naResolverInstance.GetMethod(parent::ThisClass(), returnType, methodName, { __VA_ARGS__ }).method.GetInvokeAddress()
 
