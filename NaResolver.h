@@ -1,10 +1,13 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: MidTerm						//
-// Version: v2.1.4						//
+// Version: v2.1.5						//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v2.1.5:
+// 1. Fixup the bug of being unable to get nested class
+// 2. Add more new api about getting class, especially nested classes
 // Release v2.1.4:
 // 1. Fixup some visible bus
 // 2. Change the logic of setting and getting the fields
@@ -174,12 +177,6 @@ namespace VmGeneralType
 
 		uint32_t GetOffset() const;
 
-		//DO_API(void, il2cpp_field_get_value, (Il2CppObject* obj, FieldInfo* field, void* value));
-		//DO_API(void, il2cpp_field_set_value, (Il2CppObject* obj, FieldInfo* field, void* value));
-		//DO_API(void, il2cpp_field_static_get_value, (FieldInfo* field, void* value));
-		//DO_API(void, il2cpp_field_static_set_value, (FieldInfo* field, void* value));
-		//DO_API(void, il2cpp_field_set_value_object, (Il2CppObject* instance, FieldInfo* field, Il2CppObject* value));
-
 		void GetValue(Object object, void* value);
 
 		void SetValue(Object object, void* value);
@@ -197,11 +194,15 @@ namespace VmGeneralType
 		Class(void* klass) : klass(klass) {}
 		operator void* const () { return klass; }
 
+		std::string GetName() const;
+
 		Method GetMethods(void** iter) const;
 
 		Field GetField(std::string name) const;
 
 		Type GetType() const;
+
+		std::vector<Class> GetNestedTypes(std::string className) const;
 	};
 
 	class Image
@@ -408,6 +409,12 @@ namespace VmGeneralType
 		return mono_runtime_invoke(method, obj, params, exc);
 	}
 
+	std::string Class::GetName() const
+	{
+		static auto class_get_name = VmMethodInvoker<const char*, void*>(TEXT("il2cpp_class_get_name"), TEXT("mono_class_get_name"));
+		return class_get_name(klass);
+	}
+
 	Method Class::GetMethods(void** iter) const
 	{
 		static auto class_get_methods = VmMethodInvoker<void*, void*, void**>(TEXT("il2cpp_class_get_methods"), TEXT("mono_class_get_methods"));
@@ -424,6 +431,19 @@ namespace VmGeneralType
 	{
 		static auto class_get_type = VmMethodInvoker<void*, void*>(TEXT("il2cpp_class_get_type"), TEXT("mono_class_get_type"));
 		return class_get_type(klass);
+	}
+
+	std::vector<Class> VmGeneralType::Class::GetNestedTypes(std::string className) const
+	{
+		std::vector<Class> classes = {};
+		static auto class_get_nested_types = VmMethodInvoker<void*, void*, void**>(TEXT("il2cpp_class_get_nested_types"), TEXT("mono_class_get_nested_types"));
+		void* iter = NULL;
+		void* nestedClass = NULL;
+		while ((nestedClass = class_get_nested_types(klass, &iter)) != NULL)
+		{
+			classes.push_back(nestedClass);
+		}
+		return classes;
 	}
 
 	uint32_t Field::GetOffset() const
@@ -516,11 +536,28 @@ public:
 		std::string className = std::string();
 		VmGeneralType::Class klass = VmGeneralType::Class();
 		VmGeneralType::Type type = VmGeneralType::Type();
+		std::unordered_map<std::string, Class> nestedClasses = {};
 		Class() {}
-		Class(std::string assemblyName, std::string namespaceName, std::string className, VmGeneralType::Class klass, VmGeneralType::Type type) : assemblyName(assemblyName), namespaceName(namespaceName), className(className), klass(klass), type(type) {}
+		Class(const Class& klass)
+			: assemblyName(klass.assemblyName), namespaceName(klass.namespaceName), className(klass.className), klass(klass.klass), type(klass.type), nestedClasses(klass.nestedClasses) {}
+		Class(const std::string& assemblyName, const std::string& namespaceName, const std::string& className, const VmGeneralType::Class& klass, const VmGeneralType::Type& type)
+			: assemblyName(assemblyName), namespaceName(namespaceName), className(className), klass(klass), type(type) {}
 		operator VmGeneralType::Class() { return klass; }
 		operator VmGeneralType::Type() { return type; }
 		operator bool() { return klass && type; }
+
+		void AddNestedClass(const std::string name, const Class& klass)
+		{
+			nestedClasses.insert({ name, klass });
+		}
+
+		Class FindNestedClass(const std::string name) const
+		{
+			auto iter = nestedClasses.find(name);
+			if (iter == nestedClasses.end())
+				return Class();
+			return iter->second;
+		}
 	};
 	class Method
 	{
@@ -529,31 +566,6 @@ public:
 		std::string methodName = std::string();
 		std::vector<std::string> parametersTypeName = std::vector<std::string>();
 		VmGeneralType::Method method = VmGeneralType::Method();
-		template<typename ...Args>
-		void* PackArgs(Args ...args)
-		{
-			const int argsSize = sizeof...(Args);
-			void* argsArray[argsSize] = { &args... };
-			if (argsSize != 0)
-			{
-				int index = 0;
-				std::vector<void*> argsVector = { &args... };
-				for (int i = 0; i < argsSize; i++)
-				{
-					if (argsVector[i] == nullptr)
-						continue;
-					if (argsVector[i] == nullptr)
-						continue;
-					if (parametersTypeName[i] == "System.String")
-					{
-						argsArray[i] = VmGeneralType::String(*(std::string*)argsVector[i]).address;
-						continue;
-					}
-					argsArray[i] = argsVector[i];
-				}
-			}
-			return argsArray;
-		}
 		Method() {}
 		Method(std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName, VmGeneralType::Method method) : returnTypeName(returnTypeName), methodName(methodName), parametersTypeName(parametersTypeName), method(method) {}
 		operator VmGeneralType::Method() { return method; }
@@ -582,6 +594,11 @@ public:
 
 		Class GetClass(std::string assembly, std::string nameSpace, std::string name) const;
 
+		Class& GetClass(std::string assembly, std::string nameSpace, std::string name)
+		{
+			return classPathMap[assembly][nameSpace][name];
+		}
+
 		void Clear();
 	};
 private:
@@ -591,7 +608,8 @@ private:
 public:
 	bool Setup();
 	void Destroy();
-	Class GetClass(std::string assemblyName, std::string namespaceName, std::string className);
+	Class GetClass(const std::string& assemblyName, const std::string& namespaceName, const std::string& className);
+	Class GetClass(Class parent, std::string className);
 	Method GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName);
 };
 
@@ -656,7 +674,7 @@ void NaResolver::Destroy()
 	cache.Clear();
 }
 
-NaResolver::Class NaResolver::GetClass(std::string assemblyName, std::string namespaceName, std::string className)
+NaResolver::Class NaResolver::GetClass(const std::string& assemblyName, const std::string& namespaceName, const std::string& className)
 {
 	Class result = cache.GetClass(assemblyName, namespaceName, className);
 	if (result)
@@ -682,6 +700,33 @@ NaResolver::Class NaResolver::GetClass(std::string assemblyName, std::string nam
 		return Class();
 	}
 	return result = cache.RegisterClass(assemblyName, namespaceName, className, klass, klass.GetType());
+}
+
+NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
+{
+	if (!parent)
+	{
+		return NaResolver::Class();
+	}
+	Class& parentReference = cache.GetClass(parent.assemblyName, parent.namespaceName, parent.className);
+	if (!parentReference)
+	{
+		return NaResolver::Class();
+	}
+	if (parentReference.nestedClasses.empty())
+	{
+		std::vector<VmGeneralType::Class> nestedClasses = parentReference.klass.GetNestedTypes(className);
+		if (nestedClasses.empty())
+		{
+			return NaResolver::Class();
+		}
+		for (VmGeneralType::Class nestedClass : nestedClasses)
+		{
+			Class klass = Class(parentReference.assemblyName, parentReference.namespaceName, className, nestedClass, nestedClass.GetType());
+			parentReference.AddNestedClass(klass.className, klass);
+		}
+	}
+	return parentReference.FindNestedClass(className);
 }
 
 NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName)
@@ -724,6 +769,11 @@ NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeNam
 	static NaResolver::Class ThisClass() \
 	{ \
 		return naResolverInstance.GetClass(assemblyName, namespaceName, className); \
+	}
+#define NESTED_CLASS(parent, className) \
+	static NaResolver::Class ThisClass() \
+	{ \
+		return naResolverInstance.GetClass(parent::ThisClass(), className); \
 	}
 
 #define GET_FIELDT(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR(#name))
