@@ -1,10 +1,13 @@
 //**************************************//
 // Hi NaResolver						//
-// Author: MidTerm						//
-// Version: v2.1.5						//
+// Author: NaOrganization				//
+// Version: v2.2						//
+// Branch: mono							//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v2.2:
+// 1. Re-separate the version of different Game runtime, il2cpp and mono
 // Release v2.1.5:
 // 1. Fixup the bug of being unable to get nested class
 // 2. Add more new api about getting class, especially nested classes
@@ -107,20 +110,10 @@ namespace VmGeneralType
 	class VmMethodInvoker : public NaMethodInvoker<R, Args...>
 	{
 	public:
-		VmMethodInvoker(std::string symbol)
+		VmMethodInvoker(const char* symbol)
 		{
-			this->content = (R(*)(Args...))GetProcAddress(GetModule(), symbol.c_str());
+			this->content = (R(*)(Args...))GetProcAddress(GetModuleHandleA(TEXT("mono-2.0-bdwgc.dll")), symbol);
 		}
-		VmMethodInvoker(std::string il2CppSymbol, std::string monoSymbol)
-		{
-			this->content = (R(*)(Args...))GetProcAddress(GetModule(), il2CppSymbol.c_str());
-			if (this->content == nullptr)
-			{
-				this->content = (R(*)(Args...))GetProcAddress(GetModule(), monoSymbol.c_str());
-			}
-		}
-
-		static HMODULE GetModule();
 	};
 
 	class Object
@@ -164,18 +157,15 @@ namespace VmGeneralType
 		std::vector<Type> GetParametersType() const;
 
 		void* GetInvokeAddress() const;
-
-		void* RuntimeInvoke(void* obj, void** params, void** exc) const;
 	};
 
 	class Field
 	{
 	public:
 		void* fieldInfo = NULL;
+		void* vtable = NULL;
 		Field() {}
-		Field(void* fieldInfo) : fieldInfo(fieldInfo) {}
-
-		uint32_t GetOffset() const;
+		Field(void* fieldInfo, void* vtable) : fieldInfo(fieldInfo), vtable(vtable) {}
 
 		void GetValue(Object object, void* value);
 
@@ -203,6 +193,8 @@ namespace VmGeneralType
 		Type GetType() const;
 
 		std::vector<Class> GetNestedTypes(std::string className) const;
+
+		void* VTable() const;
 	};
 
 	class Image
@@ -250,23 +242,14 @@ namespace VmGeneralType
 		String(void* address) : address(address) {}
 		String(std::string string)
 		{
-			// il2cpp_string_new(x), mono_string_new(domain, x)
-			static auto il2cpp_string_new = VmMethodInvoker<void*, const char*>(TEXT("il2cpp_string_new"));
-			if (il2cpp_string_new.IsValid())
-			{
-				address = il2cpp_string_new(string.c_str());
-			}
-			else
-			{
-				static auto mono_string_new = VmMethodInvoker<void*, void*, const char*>(TEXT("mono_string_new"));
-				address = mono_string_new(Domain::Get(), string.c_str());
-			}
+			static auto mono_string_new = VmMethodInvoker<void*, void*, const char*>(TEXT("mono_string_new"));
+			address = mono_string_new(Domain::Get(), string.c_str());
 		}
 		operator void* const () { return address; }
 
 		std::string ToString() const
 		{
-			static auto string_chars = VmMethodInvoker<wchar_t*, void*>(TEXT("il2cpp_string_chars"), TEXT("mono_string_chars"));
+			static VmMethodInvoker<wchar_t*, void*> string_chars = TEXT("mono_string_chars");
 			if (!string_chars.IsValid()) return "";
 			wchar_t* data = string_chars(address);
 			if (!data) return "";
@@ -275,6 +258,12 @@ namespace VmGeneralType
 		}
 
 		operator std::string const () { return ToString(); }
+	};
+
+	class Array
+	{
+	public:
+		static void* New(Class elementTypeInfo, uint32_t length);
 	};
 
 	class Thread
@@ -293,31 +282,16 @@ namespace VmGeneralType
 		void Detach() const;
 	};
 
-	template<typename R, typename ...Args>
-	HMODULE VmMethodInvoker<R, Args...>::GetModule()
-	{
-		static HMODULE moduleHandle = NULL;
-		if (moduleHandle != NULL)
-			return moduleHandle;
-		moduleHandle = GetModuleHandleA(TEXT("GameAssembly.dll"));
-		if (moduleHandle != NULL)
-			return moduleHandle;
-		moduleHandle = GetModuleHandleA(TEXT("mono-2.0-bdwgc.dll"));
-		if (moduleHandle != NULL)
-			return moduleHandle;
-		return moduleHandle;
-	}
-
 	std::string Type::GetName() const
 	{
-		static auto type_get_name = VmMethodInvoker<const char*, void*>(TEXT("il2cpp_type_get_name"), TEXT("mono_type_get_name"));
+		static VmMethodInvoker<const char*, void*> type_get_name = TEXT("mono_type_get_name");
 		return type_get_name(type);
 	}
 
 	VmGeneralType::Object Type::GetObject() const
 	{
-		static auto object_new = VmMethodInvoker<void*, void*>(TEXT("il2cpp_type_get_object"), TEXT("mono_type_get_object"));
-		return object_new(type);
+		static VmMethodInvoker<void*, void*, void*> object_new = TEXT("mono_type_get_object");
+		return object_new(Domain::Get(), type);
 	}
 
 	void* Method::GetSignatureForMono() const
@@ -328,7 +302,7 @@ namespace VmGeneralType
 
 	std::string Method::GetName() const
 	{
-		static auto method_get_name = VmMethodInvoker<const char*, void*>(TEXT("il2cpp_method_get_name"), TEXT("mono_method_get_name"));
+		static VmMethodInvoker<const char*, void*> method_get_name = TEXT("mono_method_get_name");
 		return method_get_name(method);
 	}
 
@@ -391,52 +365,37 @@ namespace VmGeneralType
 	void* Method::GetInvokeAddress() const
 	{
 		static auto mono_compile_method = VmMethodInvoker<void*, void*>(TEXT("mono_compile_method"));
-		try
-		{
-			if (mono_compile_method.IsValid())
-				return mono_compile_method(method);
-		}
-		catch (...)
-		{
-			return 0;
-		}
-		return *(void**)method;
-	}
-
-	void* Method::RuntimeInvoke(void* obj, void** params, void** exc) const
-	{
-		static auto mono_runtime_invoke = VmMethodInvoker<void*, void*, void*, void**, void**>(TEXT("mono_runtime_invoke"));
-		return mono_runtime_invoke(method, obj, params, exc);
+		return mono_compile_method(method);
 	}
 
 	std::string Class::GetName() const
 	{
-		static auto class_get_name = VmMethodInvoker<const char*, void*>(TEXT("il2cpp_class_get_name"), TEXT("mono_class_get_name"));
+		static VmMethodInvoker<const char*, void*> class_get_name = TEXT("mono_class_get_name");
 		return class_get_name(klass);
 	}
 
 	Method Class::GetMethods(void** iter) const
 	{
-		static auto class_get_methods = VmMethodInvoker<void*, void*, void**>(TEXT("il2cpp_class_get_methods"), TEXT("mono_class_get_methods"));
+		static VmMethodInvoker<void*, void*, void**> class_get_methods = TEXT("mono_class_get_methods");
 		return class_get_methods(klass, iter);
 	}
 
 	Field Class::GetField(std::string name) const
 	{
-		static auto class_get_field_from_name = VmMethodInvoker<void*, void*, const char*>(TEXT("il2cpp_class_get_field_from_name"), TEXT("mono_class_get_field_from_name"));
-		return class_get_field_from_name(klass, name.c_str());
+		static VmMethodInvoker<void*, void*, const char*> class_get_field_from_name = TEXT("mono_class_get_field_from_name");
+		return Field(class_get_field_from_name(klass, name.c_str()), VTable());
 	}
 
 	Type Class::GetType() const
 	{
-		static auto class_get_type = VmMethodInvoker<void*, void*>(TEXT("il2cpp_class_get_type"), TEXT("mono_class_get_type"));
+		static VmMethodInvoker<void*, void*> class_get_type = TEXT("mono_class_get_type");
 		return class_get_type(klass);
 	}
 
 	std::vector<Class> VmGeneralType::Class::GetNestedTypes(std::string className) const
 	{
 		std::vector<Class> classes = {};
-		static auto class_get_nested_types = VmMethodInvoker<void*, void*, void**>(TEXT("il2cpp_class_get_nested_types"), TEXT("mono_class_get_nested_types"));
+		static VmMethodInvoker<void*, void*, void**> class_get_nested_types = TEXT("mono_class_get_nested_types");
 		void* iter = NULL;
 		void* nestedClass = NULL;
 		while ((nestedClass = class_get_nested_types(klass, &iter)) != NULL)
@@ -446,81 +405,87 @@ namespace VmGeneralType
 		return classes;
 	}
 
-	uint32_t Field::GetOffset() const
+	void* Class::VTable() const
 	{
-		static auto field_get_offset = VmMethodInvoker<uint32_t, void*>(TEXT("il2cpp_field_get_offset"), TEXT("mono_field_get_offset"));
-		return field_get_offset(fieldInfo);
+		static VmMethodInvoker<void*, void*, void*> class_vtable = TEXT("mono_class_vtable");
+		return class_vtable(Domain::Get(), klass);
 	}
 
 	void Field::GetValue(Object object, void* value)
 	{
-		static auto field_get_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("il2cpp_field_get_value"), TEXT("mono_field_get_value"));
+		static VmMethodInvoker<void, void*, void*, void*> field_get_value = TEXT("mono_field_get_value");
 		field_get_value(object, fieldInfo, value);
 	}
 
 	void Field::SetValue(Object object, void* value)
 	{
-		static auto field_set_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("il2cpp_field_set_value"), TEXT("mono_field_set_value"));
+		static VmMethodInvoker<void, void*, void*, void*> field_set_value = TEXT("mono_field_set_value");
 		field_set_value(object, fieldInfo, value);
 	}
 
 	void Field::GetStaticValue(void* value)
 	{
-		static auto field_static_get_value = VmMethodInvoker<void, void*, void*>(TEXT("il2cpp_field_static_get_value"), TEXT("mono_field_static_get_value"));
-		field_static_get_value(fieldInfo, value);
+		static auto field_static_get_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("mono_field_static_get_value"));
+		field_static_get_value(vtable, fieldInfo, value);
 	}
 
 	void Field::SetStaticValue(void* value)
 	{
-		static auto field_static_set_value = VmMethodInvoker<void, void*, void*>(TEXT("il2cpp_field_static_set_value"), TEXT("mono_field_static_set_value"));
-		field_static_set_value(fieldInfo, value);
+		static auto field_static_set_value = VmMethodInvoker<void, void*, void*, void*>(TEXT("mono_field_static_set_value"));
+		field_static_set_value(vtable, fieldInfo, value);
 	}
 
 	std::string Image::GetName() const
 	{
-		static auto image_get_name = VmMethodInvoker<const char*, void*>(TEXT("il2cpp_image_get_name"), TEXT("mono_image_get_name"));
+		static VmMethodInvoker<const char*, void*> image_get_name = TEXT("mono_image_get_name");
 		return image_get_name(image);
 	}
 
 	Class Image::GetClassFromName(std::string namespaceName, std::string className) const
 	{
-		static auto class_from_name = VmMethodInvoker<void*, void*, const char*, const char*>(TEXT("il2cpp_class_from_name"), TEXT("mono_class_from_name"));
+		static VmMethodInvoker<void*, void*, const char*, const char*> class_from_name = TEXT("mono_class_from_name");
 		return class_from_name(image, namespaceName.c_str(), className.c_str());
 	}
 
 	Image Assembly::GetImage() const
 	{
-		static auto assembly_get_image = VmMethodInvoker<void*, void*>(TEXT("il2cpp_assembly_get_image"), TEXT("mono_assembly_get_image"));
+		static VmMethodInvoker<void*, void*> assembly_get_image = TEXT("mono_assembly_get_image");
 		return assembly_get_image(assembly);
 	}
 
 	Domain Domain::Get()
 	{
-		static auto domain_get = VmMethodInvoker<void*>(TEXT("il2cpp_domain_get"), TEXT("mono_get_root_domain"));
+		static VmMethodInvoker<void*> domain_get = TEXT("mono_get_root_domain");
 		return domain_get();
+	}
+
+	void* Array::New(Class elementTypeInfo, uint32_t length)
+	{
+		static VmMethodInvoker<void*, void*, void*, uint32_t> array_new = TEXT("mono_array_new");
+		return array_new(Domain::Get(), elementTypeInfo, length);
 	}
 
 	Assembly Domain::OpenAssembly(std::string name) const
 	{
-		static auto assembly_get = VmMethodInvoker<void*, void*, const char*>(TEXT("il2cpp_domain_assembly_open"), TEXT("mono_domain_assembly_open"));
+		static VmMethodInvoker<void*, void*, const char*> assembly_get = TEXT("mono_domain_assembly_open");
 		return assembly_get(domain, name.c_str());
 	}
 
 	Thread Thread::Attach(Domain domain)
 	{
-		static auto thread_attach = VmMethodInvoker<void*, void*>(TEXT("il2cpp_thread_attach"), TEXT("mono_thread_attach"));
+		static VmMethodInvoker<void*, void*> thread_attach = TEXT("mono_thread_attach");
 		return alreadyAttach = thread_attach(domain);
 	}
 
 	Thread Thread::Current()
 	{
-		static auto thread_current = VmMethodInvoker<void*>(TEXT("il2cpp_thread_current"), TEXT("mono_thread_current"));
+		static VmMethodInvoker<void*> thread_current = TEXT("mono_thread_current");
 		return thread_current();
 	}
 
 	void Thread::Detach() const
 	{
-		static auto thread_detach = VmMethodInvoker<void, void*>(TEXT("il2cpp_thread_detach"), TEXT("mono_thread_detach"));
+		static VmMethodInvoker<void, void*> thread_detach = TEXT("mono_thread_detach");
 		thread_detach(thread);
 	}
 }
@@ -609,8 +574,8 @@ public:
 	bool Setup();
 	void Destroy();
 	Class GetClass(const std::string& assemblyName, const std::string& namespaceName, const std::string& className);
-	Class GetClass(Class parent, std::string className);
-	Method GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName);
+	Class GetClass(Class parent, const std::string& className);
+	Method GetMethod(Class parent, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName);
 };
 
 CXX17_INLINE NaResolver naResolverInstance = NaResolver();
@@ -702,7 +667,7 @@ NaResolver::Class NaResolver::GetClass(const std::string& assemblyName, const st
 	return result = cache.RegisterClass(assemblyName, namespaceName, className, klass, klass.GetType());
 }
 
-NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
+NaResolver::Class NaResolver::GetClass(Class parent, const std::string& className)
 {
 	if (!parent)
 	{
@@ -729,7 +694,7 @@ NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
 	return parentReference.FindNestedClass(className);
 }
 
-NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName)
+NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName)
 {
 	if (!parent)
 	{
