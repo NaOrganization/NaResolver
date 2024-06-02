@@ -528,8 +528,8 @@ public:
 	bool Setup();
 	void Destroy();
 	Class GetClass(const std::string& assemblyName, const std::string& namespaceName, const std::string& className);
-	Class GetClass(Class parent, std::string className);
-	Method GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName);
+	Class GetClass(Class parent, const std::string& className);
+	Method GetMethod(Class parent, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName);
 };
 
 CXX17_INLINE NaResolver naResolverInstance = NaResolver();
@@ -621,7 +621,7 @@ NaResolver::Class NaResolver::GetClass(const std::string& assemblyName, const st
 	return result = cache.RegisterClass(assemblyName, namespaceName, className, klass, klass.GetType());
 }
 
-NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
+NaResolver::Class NaResolver::GetClass(Class parent, const std::string& className)
 {
 	if (!parent)
 	{
@@ -648,7 +648,7 @@ NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
 	return parentReference.FindNestedClass(className);
 }
 
-NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeName, std::string methodName, std::vector<std::string> parametersTypeName)
+NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName)
 {
 	if (!parent)
 	{
