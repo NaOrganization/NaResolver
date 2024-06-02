@@ -752,7 +752,7 @@ NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeNam
 		for (size_t i = 0; i < parametersType.size(); i++)
 		{
 			std::string parameterType = parametersType[i].GetName();
-			if (parameterType != parametersTypeName[i] && parameterType != TEXT("_AUTO_"))
+			if (parameterType != parametersTypeName[i] && parameterType == TEXT("_AUTO_"))
 			{
 				isMatch = false;
 				break;
