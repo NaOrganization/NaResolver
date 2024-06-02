@@ -722,7 +722,7 @@ NaResolver::Class NaResolver::GetClass(Class parent, std::string className)
 		}
 		for (VmGeneralType::Class nestedClass : nestedClasses)
 		{
-			Class klass = Class(parentReference.assemblyName, parentReference.namespaceName, className, nestedClass, nestedClass.GetType());
+			Class klass = Class(parentReference.assemblyName, parentReference.namespaceName, nestedClass.GetName(), nestedClass, nestedClass.GetType());
 			parentReference.AddNestedClass(klass.className, klass);
 		}
 	}
