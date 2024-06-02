@@ -850,7 +850,7 @@ NaResolver::Method NaResolver::GetMethod(Class parent, std::string returnTypeNam
 	BACKING_STR_FIELD_GETTER(name) \
 	BACKING_STR_FIELD_SETTER(name)
 
-#define STATIC_FIELD_GETTTER(type, name) \
+#define STATIC_FIELD_GETTER(type, name) \
 	static type get_##name() \
 	{ \
 		static VmGeneralType::Field field = GET_FIELDT(name); \
