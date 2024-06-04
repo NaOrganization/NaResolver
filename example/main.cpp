@@ -11,84 +11,39 @@ namespace System
 	class Object
 	{
 	public:
-		CLASS("mscorlib", "System", "Object");
-
-
-
-		std::string ToString()
-		{
-			static auto invoker = NaMethodInvoker<void*, Object*>(METHOD_ADDRESS("System.String", "ToString", ));
-			return (VmGeneralType::String)invoker.Invoke(this);
-		}
+		CLASS(mscorlib, System, Object);
 	};
 }
 
 namespace UnityEngine
 {
+	using namespace Template;
+
 	// Type: Class
 	class Object : public System::Object
 	{
 	public:
-		CLASS("UnityEngine.CoreModule", "UnityEngine", "Object");
+		CLASS(mscorlib, System, Object);
 
-
-
-		std::string get_name()
-		{
-			static auto invoker = NaMethodInvoker<void*, Object*>(METHOD_ADDRESS("System.String", "get_name", ));
-			return (VmGeneralType::String)invoker.Invoke(this);
-		}
-		void set_name(VmGeneralType::String value)
-		{
-			static auto invoker = NaMethodInvoker<void, Object*, void*>(METHOD_ADDRESS("System.Void", "set_name", "System.String"));
-			return invoker.Invoke(this, value);
-		}
-		static void Destroy(UnityEngine::Object* obj)
-		{
-			static auto invoker = NaMethodInvoker<void, UnityEngine::Object*>(METHOD_ADDRESS("System.Void", "Destroy", "UnityEngine.Object"));
-			return invoker.Invoke(obj);
-		}
+		STATIC_FIELD(int, test);
 	};
 	// Type: Class
 	class Application : public System::Object
 	{
 	public:
-		CLASS("UnityEngine.CoreModule", "UnityEngine", "Application");
+		CLASS(mscorlib, System, Application);
 
-
-
-		static std::string get_unityVersion()
-		{
-			static auto invoker = NaMethodInvoker<void*>(METHOD_ADDRESS("System.String", "get_unityVersion", ));
-			return (VmGeneralType::String)invoker.Invoke();
-		}
-		static std::string get_version()
-		{
-			static auto invoker = NaMethodInvoker<void*>(METHOD_ADDRESS("System.String", "get_version", ));
-			return (VmGeneralType::String)invoker.Invoke();
-		}
+		METHOD("System.Boolean", get_isMobilePlatform);
 		static bool get_isMobilePlatform()
 		{
-			static auto invoker = NaMethodInvoker<bool>(METHOD_ADDRESS("System.Boolean", "get_isMobilePlatform", ));
-			return invoker.Invoke();
+			return MethodInvoker<bool>(__get_isMobilePlatform.GetMethodAddress())();
 		}
 	};
 	// Type: Class
 	class Debug : public System::Object
 	{
 	public:
-		CLASS("UnityEngine.CoreModule", "UnityEngine", "Debug");
-
-		static void LogError(void* message)
-		{
-			static auto invoker = NaMethodInvoker<void, void*>(METHOD_ADDRESS("System.Void", "LogError", "System.Object"));
-			return invoker.Invoke(message);
-		}
-		static void LogWarning(void* message)
-		{
-			static auto invoker = NaMethodInvoker<void, void*>(METHOD_ADDRESS("System.Void", "LogWarning", "System.Object"));
-			return invoker.Invoke(message);
-		}
+		CLASS(mscorlib, System, Debug);
 	};
 }
 
@@ -106,7 +61,9 @@ void Example()
 
 	//printf("Unity version: %s\n", Application::get_unityVersion().c_str());	// some unity versions don't have this method
 	//printf("Game version: %s\n", Application::get_version().c_str());			// some unity versions don't have this method
-	printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
+	//printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
+	//printf("%p", UnityEngine::Application::__get_isMobilePlatform.GetMethodAddress());
+	//printf("%p", METHOD_ADDRESS_WITH_CLASS(UnityEngine::Application, "System.Boolean", "get_isMobilePlatform"));
 
 	FreeConsole();
 	FreeLibraryAndExitThread(module, 0);
