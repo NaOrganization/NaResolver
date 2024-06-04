@@ -23,15 +23,13 @@ namespace UnityEngine
 	class Object : public System::Object
 	{
 	public:
-		CLASS(mscorlib, System, Object);
-
-		STATIC_FIELD(int, test);
+		CLASS(UnityEngine.CoreModule, UnityEngine, Object);
 	};
 	// Type: Class
 	class Application : public System::Object
 	{
 	public:
-		CLASS(mscorlib, System, Application);
+		CLASS(UnityEngine.CoreModule, UnityEngine, Application);
 
 		METHOD("System.Boolean", get_isMobilePlatform);
 		static bool get_isMobilePlatform()
@@ -43,7 +41,7 @@ namespace UnityEngine
 	class Debug : public System::Object
 	{
 	public:
-		CLASS(mscorlib, System, Debug);
+		CLASS(UnityEngine.CoreModule, UnityEngine, Debug);
 	};
 }
 
@@ -61,9 +59,8 @@ void Example()
 
 	//printf("Unity version: %s\n", Application::get_unityVersion().c_str());	// some unity versions don't have this method
 	//printf("Game version: %s\n", Application::get_version().c_str());			// some unity versions don't have this method
-	//printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
-	//printf("%p", UnityEngine::Application::__get_isMobilePlatform.GetMethodAddress());
-	//printf("%p", METHOD_ADDRESS_WITH_CLASS(UnityEngine::Application, "System.Boolean", "get_isMobilePlatform"));
+	printf("%p\n", UnityEngine::Application::__get_isMobilePlatform.GetMethodAddress());
+	printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
 
 	FreeConsole();
 	FreeLibraryAndExitThread(module, 0);
