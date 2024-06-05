@@ -31,10 +31,18 @@ namespace UnityEngine
 	public:
 		CLASS(UnityEngine.CoreModule, UnityEngine, Application);
 
+		//FIELD(int, test);
+
 		METHOD("System.Boolean", get_isMobilePlatform);
 		static bool get_isMobilePlatform()
 		{
-			return MethodInvoker<bool>(__get_isMobilePlatform.GetMethodAddress())();
+			return MethodInvoker<bool>(__get_isMobilePlatform_Method_Info__.GetMethodAddress())();
+		}
+
+		METHOD("System.String", get_unityVersion);
+		static std::string get_unityVersion()
+		{
+			return VmGeneralType::String(MethodInvoker<void*>(__get_unityVersion_Method_Info__.GetMethodAddress())());
 		}
 	};
 	// Type: Class
@@ -57,10 +65,10 @@ void Example()
 	if (!naResolverInstance.Setup())
 		printf("Failed to setup NaResolver!\n");
 
-	//printf("Unity version: %s\n", Application::get_unityVersion().c_str());	// some unity versions don't have this method
+	printf("Unity version: %s\n", Application::get_unityVersion().c_str());	// some unity versions don't have this method
 	//printf("Game version: %s\n", Application::get_version().c_str());			// some unity versions don't have this method
-	printf("%p\n", UnityEngine::Application::__get_isMobilePlatform.GetMethodAddress());
-	printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
+	//printf("%p\n", UnityEngine::Application::__get_isMobilePlatform_Method_Info__.GetMethodAddress());
+	//printf("Is MobilePlatform: %d\n", Application::get_isMobilePlatform());
 
 	FreeConsole();
 	FreeLibraryAndExitThread(module, 0);

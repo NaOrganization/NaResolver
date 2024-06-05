@@ -1,11 +1,14 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.0						//
+// Version: v3.0.1						//
 // Branch: il2cpp						//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v3.1:
+// 1. Normalized the code
+// 2. Add new features about field and methods
 // Release v3.0:
 // 1. Normalized the code
 // 2. Changed the original mostly macro structure
@@ -307,38 +310,27 @@ namespace Template
 	class MethodInvoker
 	{
 	public:
-		using functionPtrType = R(*)(Args...);
-		functionPtrType content = {};
+		using FunctionType = R(*)(Args...);
+		FunctionType content = nullptr;
 
 		MethodInvoker() {}
-		MethodInvoker(void* address) : content((functionPtrType)address) {}
+		MethodInvoker(void* address) : content((FunctionType)address) {}
 
 		template<typename T = R,
 			typename std::enable_if_t<!std::is_void<T>::value, int> = 0>
 		R Invoke(Args ... arg) const
 		{
-			R result = {};
-			if (content != nullptr)
-			{
-				result = content(arg...);
-			}
-			return result;
+			return content(arg...);
 		}
 
 		template<typename T = R,
 			typename std::enable_if_t<std::is_void<T>::value, int> = 0>
 		void Invoke(Args ... arg) const
 		{
-			if (content != nullptr)
-			{
-				content(arg...);
-			}
+			content(arg...);
 		}
 
-		R operator()(Args ... arg) const
-		{
-			return Invoke(arg...);
-		}
+		R operator()(Args ... arg) const { if (content != nullptr) return Invoke(arg...); }
 
 		bool IsValid() const
 		{
@@ -370,8 +362,9 @@ namespace Template
 	};
 
 	template <StringLiteral Assembly, StringLiteral Namespace, StringLiteral Name>
-	struct NormalClass
+	class NormalClassInfo
 	{
+	public:
 		static constexpr auto AssemblyName = Assembly;
 		static constexpr auto NamespaceName = Namespace;
 		static constexpr auto ClassName = Name;
@@ -381,40 +374,64 @@ namespace Template
 	};
 
 	template <typename Declaring, StringLiteral Name>
-	struct NestedClass
+	class NestedClassInfo
 	{
-		static constexpr auto DeclaringClass = Declaring::ThisClass;
+	public:
+		static constexpr auto DeclaringClass = Declaring::ThisClassInfo;
 		static constexpr auto ClassName = Name;
 		inline static NaResolver::Class ClassInfoCache = nullptr;
 
 		inline static NaResolver::Class Instance();
 	};
 
-	template <typename Declaring, typename Type, StringLiteral Name, bool IsBacking = false>
-	struct StaticMemberField
-	{
-		static constexpr auto DeclaringClass = Declaring::ThisClass;
-		static constexpr auto FieldName = Name;
-		static constexpr auto IsBackingField = IsBacking;
-		inline static VmGeneralType::Field FieldInfoCache = nullptr;
-
-		inline static VmGeneralType::Field GetFieldInfo();
-
-		operator Type();
-
-		Type operator=(Type value);
-	};
-
 	template <typename Declaring, StringLiteral ReturnType, StringLiteral Name, StringLiteral... Args>
-	struct MemberMethod
+	class MemberMethodInfo
 	{
-		static constexpr auto DeclaringClass = Declaring::ThisClass;
+	public:
+		static constexpr auto DeclaringClass = Declaring::ThisClassInfo;
 		static constexpr auto ReturnTypeName = ReturnType;
 		static constexpr auto MethodName = Name;
 		static constexpr auto Parameters = std::make_tuple(Args...);
 		inline static void* MethodAddressCache = nullptr;
 
 		inline static void* GetMethodAddress();
+	};
+
+	template <typename Declaring, StringLiteral Name, bool IsBacking = false>
+	class MemberFieldInfo
+	{
+	public:
+		static constexpr auto DeclaringClass = Declaring::ThisClassInfo;
+		static constexpr auto FieldName = Name;
+		static constexpr auto IsBackingField = IsBacking;
+		inline static VmGeneralType::Field FieldInfoCache = nullptr;
+
+		inline static VmGeneralType::Field GetFieldInfo();
+	};
+
+	template <typename Declaring, typename Type, StringLiteral Name, bool IsBacking = false>
+	class StaticMemberField
+	{
+	public:
+		MemberFieldInfo<Declaring, Name, IsBacking> field = MemberFieldInfo<Declaring, Name, IsBacking>();
+
+		operator Type();
+
+		const Type& operator=(const Type& value);
+	};
+
+	template <typename Type>
+	class MemberFieldOperator
+	{
+	public:
+		VmGeneralType::Field fieldInfo = VmGeneralType::Field();
+		void* object = nullptr;
+
+		MemberFieldOperator(VmGeneralType::Field fieldInfo, void* object) : fieldInfo(fieldInfo), object(object) {}
+
+		Type Get();
+
+		const Type& Set(const Type& value);
 	};
 }
 
@@ -439,7 +456,7 @@ Template::VmMethodInvoker<R, Args...>::VmMethodInvoker(const char* symbol)
 }
 
 template<Template::StringLiteral Assembly, Template::StringLiteral Namespace, Template::StringLiteral Name>
-NaResolver::Class Template::NormalClass<Assembly, Namespace, Name>::Instance()
+NaResolver::Class Template::NormalClassInfo<Assembly, Namespace, Name>::Instance()
 {
 	if (ClassInfoCache.klass != nullptr)
 		return ClassInfoCache;
@@ -447,15 +464,15 @@ NaResolver::Class Template::NormalClass<Assembly, Namespace, Name>::Instance()
 }
 
 template<typename Declaring, Template::StringLiteral Name>
-NaResolver::Class Template::NestedClass<Declaring, Name>::Instance()
+NaResolver::Class Template::NestedClassInfo<Declaring, Name>::Instance()
 {
 	if (ClassInfoCache.klass != nullptr)
 		return ClassInfoCache;
 	return ClassInfoCache = naResolverInstance.GetClass(DeclaringClass.Instance(), ClassName);
 }
 
-template<typename Declaring, typename Type, Template::StringLiteral Name, bool IsBacking>
-VmGeneralType::Field Template::StaticMemberField<Declaring, Type, Name, IsBacking>::GetFieldInfo()
+template<typename Declaring, Template::StringLiteral Name, bool IsBacking>
+VmGeneralType::Field Template::MemberFieldInfo<Declaring, Name, IsBacking>::GetFieldInfo()
 {
 	if (FieldInfoCache.fieldInfo == nullptr)
 		return FieldInfoCache;
@@ -469,40 +486,73 @@ VmGeneralType::Field Template::StaticMemberField<Declaring, Type, Name, IsBackin
 	}
 }
 
+template<typename Type>
+Type Template::MemberFieldOperator<Type>::Get()
+{
+	if constexpr (std::is_same_v<Type, std::string>)
+	{
+		void* result = nullptr;
+		fieldInfo.GetValue(object, &result);
+		return VmGeneralType::String(result);
+	}
+	else
+	{
+		Type result = Type();
+		fieldInfo.GetValue(object, &result);
+		return result;
+	}
+}
+
+template<typename Type>
+const Type& Template::MemberFieldOperator<Type>::Set(const Type& value)
+{
+	if constexpr (std::is_same_v<Type, std::string>)
+	{
+		fieldInfo.SetValue(object, VmGeneralType::String(value).address);
+		return value;
+	}
+	else
+	{
+		fieldInfo.SetValue(object, &value);
+		return value;
+	}
+}
+
+
 template<typename Declaring, typename Type, Template::StringLiteral Name, bool IsBacking>
 Template::StaticMemberField<Declaring, Type, Name, IsBacking>::operator Type()
 {
 	if constexpr (std::is_same_v<Type, std::string>)
 	{
 		void* result = nullptr;
-		GetFieldInfo().GetStaticValue(&result);
+		field.GetFieldInfo().GetStaticValue(&result);
 		return VmGeneralType::String(result);
 	}
 	else
 	{
 		Type result = Type();
-		GetFieldInfo().GetStaticValue(&result);
+		field.GetFieldInfo().GetStaticValue(&result);
 		return result;
 	}
 }
 
 template<typename Declaring, typename Type, Template::StringLiteral Name, bool IsBacking>
-Type Template::StaticMemberField<Declaring, Type, Name, IsBacking>::operator=(Type value)
+const Type& Template::StaticMemberField<Declaring, Type, Name, IsBacking>::operator=(const Type& value)
 {
 	if constexpr (std::is_same_v<Type, std::string>)
 	{
-		GetFieldInfo().SetStaticValue(VmGeneralType::String(value).address);
+		field.GetFieldInfo().SetStaticValue(VmGeneralType::String(value).address);
 		return value;
 	}
 	else
 	{
-		GetFieldInfo().SetStaticValue(&value);
+		field.GetFieldInfo().SetStaticValue(&value);
 		return value;
 	}
 }
 
 template<typename Declaring, Template::StringLiteral ReturnType, Template::StringLiteral MethodName, Template::StringLiteral ...Args>
-void* Template::MemberMethod<Declaring, ReturnType, MethodName, Args...>::GetMethodAddress()
+void* Template::MemberMethodInfo<Declaring, ReturnType, MethodName, Args...>::GetMethodAddress()
 {
 	if (MethodAddressCache != nullptr)
 		return MethodAddressCache;
@@ -861,47 +911,11 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 }
 
 #define CLASS(assemblyName,namespaceName,className) \
-	using __FakeThisClassType = className; \
-	inline static constexpr Template::NormalClass<#assemblyName, #namespaceName, #className> ThisClass = {}
+	using __This_Class_Type__ = className; \
+	inline static constexpr Template::NormalClassInfo<#assemblyName, #namespaceName, #className> ThisClassInfo = {}
 #define NESTED_CLASS(parent, className) \
-	using __FakeThisClassType = className; \
-	inline static constexpr Template::NestedClass<parent, #className> ThisClass = {}
-
-#define GET_FIELDT(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR(#name))
-#define GET_BACKING_FIELD(name) ThisClass().klass.GetField(NA_RESOLVER_STRING_XOR("<" #name ">k__BackingField"))
-
-#define FIELD_GETTER(type, name) \
-	type get_##name() \
-	{ \
-		static VmGeneralType::Field field = GET_FIELDT(name); \
-		type value = {}; \
-		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
-		return value; \
-	}
-#define STR_FIELD_GETTER(name) \
-	std::string get_##name()\
-	{\
-		static VmGeneralType::Field field = GET_FIELDT(name); \
-		void* value; \
-		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
-		return ((VmGeneralType::String)value);\
-	}
-#define BACKING_FIELD_GETTER(type, name)\
-	type get_backingField_##name()\
-	{\
-		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
-		type value = {}; \
-		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
-		return value; \
-	}
-#define BACKING_STR_FIELD_GETTER(name)\
-	std::string get_backingField_##name()\
-	{\
-		static VmGeneralType::Field field = GET_BACKING_FIELD(name); \
-		void* value; \
-		field.GetValue((VmGeneralType::Object)(void*)this, &value); \
-		return ((VmGeneralType::String)value);\
-	}
+	using __This_Class_Type__ = className; \
+	inline static constexpr Template::NestedClassInfo<parent, #className> ThisClassInfo = {}
 
 #define FIELD_SETTER(type, name) \
 	void set_##name(type value) \
@@ -928,26 +942,20 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 		field.SetValue((VmGeneralType::Object)(void*)this, value.address);\
 	}
 
+#define FIELD_INFO(name, backing) inline static constexpr Template::MemberFieldInfo<__This_Class_Type__, #name, backing> __##name##_Field_Info__ = {};
+#define FIELD_BODY(type, name) \
+	type get_##name##() { return Template::MemberFieldOperator<type>(__##name_Field_Info__.GetFieldInfo(), this).Get(); } \
+	type set_##name##(type value) { return Template::MemberFieldOperator<type>(__##name_Field_Info__.GetFieldInfo(), this).Set(value); }
 #define FIELD(type, name) \
-	FIELD_GETTER(type, name) \
-	FIELD_SETTER(type, name)
-#define STR_FIELD(name) \
-	STR_FIELD_GETTER(name) \
-	STR_FIELD_SETTER(name)
+	FIELD_INFO(name, false)\
+	FIELD_BODY(type, name)
 #define BACKING_FIELD(type, name) \
-	BACKING_FIELD_GETTER(type, name) \
-	BACKING_FIELD_SETTER(type, name)
-#define BACKING_STR_FIELD(name) \
-	BACKING_STR_FIELD_GETTER(name) \
-	BACKING_STR_FIELD_SETTER(name)
+	FIELD_INFO(name, true)\
+	FIELD_BODY(type, name)
 
-#define STATIC_FIELD(type, name) inline static Template::StaticMemberField<__FakeThisClassType, type, #name> name = {}
-#define STATIC_BACKING_FIELD(type, name) inline static Template::StaticMemberField<__FakeThisClassType, type, #name, true> name = {}
+#define STATIC_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name> name = {}
+#define STATIC_BACKING_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name, true> name = {}
 
-#define METHOD(returnType, methodName, ...) inline static constexpr MemberMethod<__FakeThisClassType, returnType, #methodName, __VA_ARGS__> __##methodName = {}
-
-#define METHOD_ADDRESS(returnType, methodName, ...) naResolverInstance.GetMethod(ThisClass.Instance(), returnType, methodName, { __VA_ARGS__ }).method.GetInvokeAddress()
-#define METHOD_ADDRESS_WITH_CLASS(parent, returnType, methodName, ...) naResolverInstance.GetMethod(parent::ThisClass.Instance(), returnType, methodName, { __VA_ARGS__ }).method.GetInvokeAddress()
-
+#define METHOD(returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_Method_Info__ = {}
 #undef TEXT
 #endif // !H_NARESOLVER
