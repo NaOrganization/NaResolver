@@ -47,16 +47,15 @@
 #undef GetClassName
 
 #pragma once
+#ifndef H_NARESOLVER
+#define H_NARESOLVER
 #include <Windows.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <codecvt>
 
-#ifndef H_NARESOLVER
-#define H_NARESOLVER
-
-#pragma warning(disable:4715
+#pragma warning(disable:4715)
 
 #ifndef NA_RESOLVER_STRING_XOR
 #define NA_RESOLVER_STRING_XOR
@@ -1113,9 +1112,9 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 #define CLASS(assemblyName,namespaceName,className) \
 	using __This_Class_Type__ = className; \
 	inline static constexpr Template::NormalClassInfo<#assemblyName, #namespaceName, #className> ThisClassInfo = {}
-#define NESTED_CLASS(parent, className) \
+#define NESTED_CLASS(declaring, className) \
 	using __This_Class_Type__ = className; \
-	inline static constexpr Template::NestedClassInfo<parent, #className> ThisClassInfo = {}
+	inline static constexpr Template::NestedClassInfo<declaring, #className> ThisClassInfo = {}
 
 #define FIELD_SETTER(type, name) \
 	void set_##name(type value) \

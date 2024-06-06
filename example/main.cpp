@@ -1,5 +1,4 @@
 #include <Windows.h>
-#define NA_RESOLVER_TEST_ENGINE
 #include "../NaResolver.h"
 
 namespace UnityEngine { class Application; }
