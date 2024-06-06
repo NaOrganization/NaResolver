@@ -1,12 +1,16 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.0.1						//
+// Version: v3.1						//
 // Branch: il2cpp						//
 //**************************************//
 
 // Change Log (Started since v1.8):
 // Release v3.1:
+// 1. Add test engine for finding out the wrong data at setup time
+// 2. Change the field backing field name handle logic
+// 3. Fixup some bug of unusable format variables
+// Release v3.0.1:
 // 1. Normalized the code
 // 2. Add new features about field and methods
 // Release v3.0:
@@ -51,6 +55,8 @@
 
 #ifndef H_NARESOLVER
 #define H_NARESOLVER
+
+#pragma warning(disable:4715
 
 #ifndef NA_RESOLVER_STRING_XOR
 #define NA_RESOLVER_STRING_XOR
@@ -146,7 +152,7 @@ namespace VmGeneralType
 
 		Type GetType() const;
 
-		std::vector<Class> GetNestedTypes(const std::string& className) const;
+		std::vector<Class> GetNestedTypes() const;
 	};
 
 	class Image
@@ -304,6 +310,110 @@ public:
 	Method GetMethod(Class parent, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName);
 };
 
+#ifdef NA_RESOLVER_TEST_ENGINE
+namespace TestEngine
+{
+	class Item
+	{
+	public:
+		enum class Type { Class, NestedClass, Field, Method, None };
+		Type type = Type::None;
+		Item(Type type);
+	};
+	class ClassItem : public Item
+	{
+	public:
+		std::string assemblyName = "";
+		std::string namespaceName = "";
+		std::string className = "";
+
+		ClassItem(const std::string& assemblyName, const std::string& namespaceName, const std::string& className) :
+			Item(Item::Type::Class), assemblyName(assemblyName), namespaceName(namespaceName), className(className) {}
+	};
+	class NestedClassItem : public Item
+	{
+	public:
+		std::string assemblyName = "";
+		std::string namespaceName = "";
+		std::string declaringClass = "";
+		std::string className = "";
+
+		NestedClassItem(const std::string& assemblyName, const std::string& namespaceName, const std::string& declaringClass, const std::string& className) :
+			Item(Item::Type::NestedClass), assemblyName(assemblyName), namespaceName(namespaceName), declaringClass(declaringClass), className(className) {}
+	};
+	class FieldItem : public Item
+	{
+	public:
+		std::string assemblyName = "";
+		std::string namespaceName = "";
+		std::string declaringClass = "";
+		std::string className = "";
+		std::string fieldName = "";
+
+		FieldItem(const std::string& assemblyName, const std::string& namespaceName, const std::string& declaringClass, const std::string& className, const std::string& fieldName) :
+			Item(Item::Type::Field), assemblyName(assemblyName), namespaceName(namespaceName), declaringClass(declaringClass), className(className), fieldName(fieldName) {}
+	};
+	class MethodItem : public Item
+	{
+	public:
+		std::string assemblyName = "";
+		std::string namespaceName = "";
+		std::string declaringClass = "";
+		std::string className = "";
+		std::string returnTypeName = "";
+		std::string methodName = "";
+		std::vector<std::string> parametersTypeName = {};
+
+		MethodItem(const std::string& assemblyName, const std::string& namespaceName, const std::string& declaringClass, const std::string& className, const std::string& returnTypeName, const std::string& methodName, const std::vector<std::string>& parametersTypeName) :
+			Item(Item::Type::Method), assemblyName(assemblyName), namespaceName(namespaceName), declaringClass(declaringClass), className(className), returnTypeName(returnTypeName), methodName(methodName), parametersTypeName(parametersTypeName) {}
+	};
+	class HandlerDevice
+	{
+	public:
+		using FunctionType = void(*)(Item*);
+		FunctionType handler = nullptr;
+		
+		void Handle(Item* item) { if (handler) handler(item); }
+
+		HandlerDevice(FunctionType handler) : handler(handler) {}
+	};
+	class HandlerDeviceRegisterer : public HandlerDevice
+	{
+	public:
+		HandlerDeviceRegisterer(FunctionType handler);
+	};
+
+	namespace Default
+	{
+		void DefaultHandler(Item* item);
+		HandlerDevice defaultHandlerDevice = HandlerDevice(DefaultHandler);
+	}
+
+	class Engine
+	{
+	public:
+		std::vector<Item*> items = {};
+		HandlerDevice* handler = &Default::defaultHandlerDevice;
+
+		void TestAllItem();
+	};
+}
+
+#define NA_RESOLVER_TEST_ENGINE_HANDLER(name) void name(TestEngine::Item* item); TestEngine::HandlerDeviceRegisterer name##HandlerDevice = TestEngine::HandlerDeviceRegisterer(name); void name(TestEngine::Item* item)
+#endif
+
+template <typename Tuple, std::size_t... I>
+auto TupleToVectorImpl(const Tuple& t, std::index_sequence<I...>)
+{
+	return std::vector<std::string>{std::string(std::get<I>(t))...};
+}
+
+template <typename... Args>
+auto TupleToVector(const std::tuple<Args...>& t)
+{
+	return TupleToVectorImpl(t, std::index_sequence_for<Args...>{});
+}
+
 namespace Template
 {
 	template<typename R, typename ...Args>
@@ -359,7 +469,22 @@ namespace Template
 		{
 			return static_cast<const char*>(Chars);
 		}
+
+		template<int32_t OtherLen>
+		consteval auto Concat(const StringLiteral<OtherLen>& other) const
+		{
+			char combined[Len + OtherLen - 1]; // -1 to avoid double null termination
+			std::copy_n(Chars, Len - 1, combined);
+			std::copy_n(other.Chars, OtherLen, combined + Len - 1);
+			return StringLiteral<Len + OtherLen - 1>(combined);
+		}
 	};
+
+	template<int32_t Len1, int32_t Len2>
+	consteval auto operator+(const StringLiteral<Len1>& lhs, const StringLiteral<Len2>& rhs)
+	{
+		return lhs.Concat(rhs);
+	}
 
 	template <StringLiteral Assembly, StringLiteral Namespace, StringLiteral Name>
 	class NormalClassInfo
@@ -368,6 +493,10 @@ namespace Template
 		static constexpr auto AssemblyName = Assembly;
 		static constexpr auto NamespaceName = Namespace;
 		static constexpr auto ClassName = Name;
+		static constexpr auto DeclaringClassName = StringLiteral("__NONE__");
+#ifdef NA_RESOLVER_TEST_ENGINE
+		inline static TestEngine::ClassItem TestItem = TestEngine::ClassItem(AssemblyName, NamespaceName, ClassName);
+#endif
 		inline static NaResolver::Class ClassInfoCache = NaResolver::Class();
 
 		inline static NaResolver::Class Instance();
@@ -378,8 +507,14 @@ namespace Template
 	{
 	public:
 		static constexpr auto DeclaringClass = Declaring::ThisClassInfo;
+		static constexpr auto AssemblyName = DeclaringClass.AssemblyName;
+		static constexpr auto NamespaceName = DeclaringClass.NamespaceName;
+		static constexpr auto DeclaringClassName = DeclaringClass.ClassName;
 		static constexpr auto ClassName = Name;
-		inline static NaResolver::Class ClassInfoCache = nullptr;
+#ifdef NA_RESOLVER_TEST_ENGINE
+		inline static TestEngine::NestedClassItem TestItem = TestEngine::NestedClassItem(DeclaringClass.AssemblyName, DeclaringClass.NamespaceName, DeclaringClassName, ClassName);
+#endif
+		inline static NaResolver::Class ClassInfoCache = NaResolver::Class();
 
 		inline static NaResolver::Class Instance();
 	};
@@ -392,9 +527,26 @@ namespace Template
 		static constexpr auto ReturnTypeName = ReturnType;
 		static constexpr auto MethodName = Name;
 		static constexpr auto Parameters = std::make_tuple(Args...);
+#ifdef NA_RESOLVER_TEST_ENGINE
+		inline static TestEngine::MethodItem TestItem = TestEngine::MethodItem(DeclaringClass.AssemblyName, DeclaringClass.NamespaceName, DeclaringClass.DeclaringClassName, DeclaringClass.ClassName, ReturnTypeName, MethodName, TupleToVector(Parameters));
+#endif
 		inline static void* MethodAddressCache = nullptr;
 
 		inline static void* GetMethodAddress();
+	};
+
+	template <StringLiteral Name, bool IsBacking>
+	struct BackingNameHandler
+	{
+		static constexpr auto Value = Name;
+
+		static consteval auto Get()
+		{
+			if constexpr (!IsBacking)
+				return Value;
+			else
+				return StringLiteral("<") + Value + StringLiteral(">k__BackingField");
+		}
 	};
 
 	template <typename Declaring, StringLiteral Name, bool IsBacking = false>
@@ -402,8 +554,10 @@ namespace Template
 	{
 	public:
 		static constexpr auto DeclaringClass = Declaring::ThisClassInfo;
-		static constexpr auto FieldName = Name;
-		static constexpr auto IsBackingField = IsBacking;
+		static constexpr auto FieldName = BackingNameHandler<Name, IsBacking>::Get();
+#ifdef NA_RESOLVER_TEST_ENGINE
+		inline static TestEngine::FieldItem TestItem = TestEngine::FieldItem(DeclaringClass.AssemblyName, DeclaringClass.NamespaceName, DeclaringClass.DeclaringClassName, DeclaringClass.ClassName, FieldName);
+#endif
 		inline static VmGeneralType::Field FieldInfoCache = nullptr;
 
 		inline static VmGeneralType::Field GetFieldInfo();
@@ -431,23 +585,73 @@ namespace Template
 
 		Type Get();
 
-		const Type& Set(const Type& value);
+		Type& Set(Type& value);
 	};
 }
 
 inline NaResolver naResolverInstance = NaResolver();
 
-template <typename Tuple, std::size_t... I>
-auto TupleToVectorImpl(const Tuple& t, std::index_sequence<I...>)
+#ifdef NA_RESOLVER_TEST_ENGINE
+inline TestEngine::Engine naResolverTestEngineInstance = TestEngine::Engine();
+
+TestEngine::Item::Item(TestEngine::Item::Type type) : type(type)
 {
-	return std::vector<std::string>{std::string(std::get<I>(t))...};
+	naResolverTestEngineInstance.items.push_back(this);
 }
 
-template <typename... Args>
-auto TupleToVector(const std::tuple<Args...>& t)
+TestEngine::HandlerDeviceRegisterer::HandlerDeviceRegisterer(FunctionType handler)
+	: HandlerDevice(handler)
 {
-	return TupleToVectorImpl(t, std::index_sequence_for<Args...>{});
+	naResolverTestEngineInstance.handler = this;
 }
+
+void TestEngine::Default::DefaultHandler(Item* item)
+{
+	if (item->type == TestEngine::Item::Type::Class)
+	{
+		TestEngine::ClassItem* classItem = (TestEngine::ClassItem*)item;
+		NaResolver::Class classInstance = naResolverInstance.GetClass(classItem->assemblyName, classItem->namespaceName, classItem->className);
+		printf(TEXT("[Test Engine] [Assembly: %s] [Namespace: %s] [Class: %s] [Result: %s]\n"), classItem->assemblyName.c_str(), classItem->namespaceName.c_str(), classItem->className.c_str(), classInstance ? "Success" : "Failed");
+	}
+	else if (item->type == TestEngine::Item::Type::NestedClass)
+	{
+		TestEngine::NestedClassItem* nestedClassItem = (TestEngine::NestedClassItem*)item;
+		NaResolver::Class classInstance = naResolverInstance.GetClass(nestedClassItem->assemblyName, nestedClassItem->namespaceName, nestedClassItem->declaringClass);
+		NaResolver::Class nestedClassInstance = naResolverInstance.GetClass(classInstance, nestedClassItem->className);
+		printf(TEXT("[Test Engine] [Assembly: %s] [Namespace: %s] [Declaring Class: %s] [Nested Class: %s] [Result: %s]\n"), nestedClassItem->assemblyName.c_str(), nestedClassItem->namespaceName.c_str(), nestedClassItem->declaringClass.c_str(), nestedClassItem->className.c_str(), nestedClassInstance ? "Success" : "Failed");
+	}
+	else if (item->type == TestEngine::Item::Type::Field)
+	{
+		TestEngine::FieldItem* fieldItem = (TestEngine::FieldItem*)item;
+		NaResolver::Class classInstance = NaResolver::Class();
+		if (fieldItem->declaringClass == "__NONE__")
+			classInstance = naResolverInstance.GetClass(fieldItem->assemblyName, fieldItem->namespaceName, fieldItem->className);
+		else
+			classInstance = naResolverInstance.GetClass(naResolverInstance.GetClass(fieldItem->assemblyName, fieldItem->namespaceName, fieldItem->declaringClass), fieldItem->className);
+		VmGeneralType::Field fieldInstance = classInstance.klass.GetField(fieldItem->fieldName);
+		printf(TEXT("[Test Engine] [Assembly: %s] [Namespace: %s] [Class: %s] [Field: %s] [Result: %s]\n"), fieldItem->assemblyName.c_str(), fieldItem->namespaceName.c_str(), fieldItem->className.c_str(), fieldItem->fieldName.c_str(), fieldInstance ? "Success" : "Failed");
+	}
+	else if (item->type == TestEngine::Item::Type::Method)
+	{
+		TestEngine::MethodItem* methodItem = (TestEngine::MethodItem*)item;
+		NaResolver::Class classInstance = NaResolver::Class();
+		if (methodItem->declaringClass == "__NONE__")
+			classInstance = naResolverInstance.GetClass(methodItem->assemblyName, methodItem->namespaceName, methodItem->className);
+		else
+			classInstance = naResolverInstance.GetClass(naResolverInstance.GetClass(methodItem->assemblyName, methodItem->namespaceName, methodItem->declaringClass), methodItem->className);
+		VmGeneralType::Method methodInstance = naResolverInstance.GetMethod(classInstance, methodItem->returnTypeName, methodItem->methodName, methodItem->parametersTypeName);
+		printf(TEXT("[Test Engine] [Assembly: %s] [Namespace: %s] [Class: %s] [Method: %s] [Result: %s]\n"), methodItem->assemblyName.c_str(), methodItem->namespaceName.c_str(), methodItem->className.c_str(), methodItem->methodName.c_str(), methodInstance ? "Success" : "Failed");
+	}
+}
+
+void TestEngine::Engine::TestAllItem()
+{
+	for (const auto& item : items)
+	{
+		handler->Handle(item);
+	}
+}
+#endif
 
 template<typename R, typename ...Args>
 Template::VmMethodInvoker<R, Args...>::VmMethodInvoker(const char* symbol)
@@ -476,14 +680,7 @@ VmGeneralType::Field Template::MemberFieldInfo<Declaring, Name, IsBacking>::GetF
 {
 	if (FieldInfoCache.fieldInfo == nullptr)
 		return FieldInfoCache;
-	if constexpr (IsBackingField)
-	{
-		return FieldInfoCache = DeclaringClass.Instance().klass.GetField(FieldName);
-	}
-	else
-	{
-		return FieldInfoCache = DeclaringClass.Instance().klass.GetField(TEXT("<") + FieldName + TEXT(">k__BackingField"));
-	}
+	return FieldInfoCache = DeclaringClass.Instance().klass.GetField(FieldName);
 }
 
 template<typename Type>
@@ -504,7 +701,7 @@ Type Template::MemberFieldOperator<Type>::Get()
 }
 
 template<typename Type>
-const Type& Template::MemberFieldOperator<Type>::Set(const Type& value)
+Type& Template::MemberFieldOperator<Type>::Set(Type& value)
 {
 	if constexpr (std::is_same_v<Type, std::string>)
 	{
@@ -635,7 +832,7 @@ VmGeneralType::Type VmGeneralType::Class::GetType() const
 	return class_get_type(klass);
 }
 
-std::vector<VmGeneralType::Class> VmGeneralType::Class::GetNestedTypes(const std::string& className) const
+std::vector<VmGeneralType::Class> VmGeneralType::Class::GetNestedTypes() const
 {
 	std::vector<Class> classes = {};
 	static Template::VmMethodInvoker<void*, void*, void**> class_get_nested_types = TEXT("il2cpp_class_get_nested_types");
@@ -810,6 +1007,9 @@ bool NaResolver::Setup()
 	{
 		return false;
 	}
+#ifdef NA_RESOLVER_TEST_ENGINE
+	naResolverTestEngineInstance.TestAllItem();
+#endif
 	return true;
 }
 
@@ -860,7 +1060,7 @@ NaResolver::Class NaResolver::GetClass(Class parent, const std::string& classNam
 	}
 	if (parentReference.nestedClasses.empty())
 	{
-		std::vector<VmGeneralType::Class> nestedClasses = parentReference.klass.GetNestedTypes(className);
+		std::vector<VmGeneralType::Class> nestedClasses = parentReference.klass.GetNestedTypes();
 		if (nestedClasses.empty())
 		{
 			return NaResolver::Class();
@@ -944,8 +1144,8 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 
 #define FIELD_INFO(name, backing) inline static constexpr Template::MemberFieldInfo<__This_Class_Type__, #name, backing> __##name##_Field_Info__ = {};
 #define FIELD_BODY(type, name) \
-	type get_##name##() { return Template::MemberFieldOperator<type>(__##name_Field_Info__.GetFieldInfo(), this).Get(); } \
-	type set_##name##(type value) { return Template::MemberFieldOperator<type>(__##name_Field_Info__.GetFieldInfo(), this).Set(value); }
+	type get_##name##() { return Template::MemberFieldOperator<type>(__##name##_Field_Info__.GetFieldInfo(), this).Get(); } \
+	type set_##name##(type value) { return Template::MemberFieldOperator<type>(__##name##_Field_Info__.GetFieldInfo(), this).Set(value); }
 #define FIELD(type, name) \
 	FIELD_INFO(name, false)\
 	FIELD_BODY(type, name)
@@ -956,6 +1156,6 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 #define STATIC_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name> name = {}
 #define STATIC_BACKING_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name, true> name = {}
 
-#define METHOD(returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_Method_Info__ = {}
+#define METHOD(parameterCount, returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_##parameterCount##_Method_Info__ = {}
 #undef TEXT
 #endif // !H_NARESOLVER
