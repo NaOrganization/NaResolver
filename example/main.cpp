@@ -1,16 +1,13 @@
 #include <Windows.h>
 #include "../NaResolver.h"
 
-namespace UnityEngine { class Application; }
-namespace UnityEngine { class Debug; }
-
 namespace System
 {
 	// Type: Class
 	class Object
 	{
 	public:
-		CLASS(mscorlib, System, Object);
+		CLASS("mscorlib", "System", Object);
 	};
 }
 
@@ -22,7 +19,7 @@ namespace UnityEngine
 	class Object : public System::Object
 	{
 	public:
-		CLASS(UnityEngine.CoreModule, UnityEngine, Object);
+		CLASS("UnityEngine.CoreModule", "UnityEngine", Object);
 	};
 	// Name: UnityEngine::Application
 	// ClassType: Normal
@@ -31,7 +28,7 @@ namespace UnityEngine
 	class Application
 	{
 	public:
-		CLASS(UnityEngine.CoreModule, UnityEngine, Application);
+		CLASS("UnityEngine.CoreModule", "UnityEngine", Application);
 
 	public:
 		// Name: LowMemoryCallback
@@ -391,7 +388,7 @@ namespace UnityEngine
 	class Debug : public System::Object
 	{
 	public:
-		CLASS(UnityEngine.CoreModule, UnityEngine, Debug);
+		CLASS("UnityEngine.CoreModule", "UnityEngine", Debug);
 	};
 }
 

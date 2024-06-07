@@ -1,11 +1,13 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.1						//
+// Version: v3.1.1						//
 // Branch: il2cpp						//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v3.1.1:
+// 1. Change the macro CLASS in order to preserve some special assembly names from vs formatting, just like Assembly-CSharp
 // Release v3.1:
 // 1. Add test engine for finding out the wrong data at setup time
 // 2. Change the field backing field name handle logic
@@ -1111,7 +1113,7 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 
 #define CLASS(assemblyName,namespaceName,className) \
 	using __This_Class_Type__ = className; \
-	inline static constexpr Template::NormalClassInfo<#assemblyName, #namespaceName, #className> ThisClassInfo = {}
+	inline static constexpr Template::NormalClassInfo<assemblyName, namespaceName, #className> ThisClassInfo = {}
 #define NESTED_CLASS(declaring, className) \
 	using __This_Class_Type__ = className; \
 	inline static constexpr Template::NestedClassInfo<declaring, #className> ThisClassInfo = {}
