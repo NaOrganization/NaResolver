@@ -68,7 +68,7 @@ class NormalClass
 public:
 // 获取类
 // CLASS(assemblyName, namespaceName, className);
-CLASS(FakeAssembly, FakeNamespace, NormalClass);
+CLASS("FakeAssembly", "FakeNamespace", NormalClass);
 
 // 嵌套类声明
 class NestedClass
