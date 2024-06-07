@@ -1,11 +1,13 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.1.1						//
+// Version: v3.1.2						//
 // Branch: il2cpp						//
 //**************************************//
 
 // Change Log (Started since v1.8):
+// Release v3.1.2:
+// 1. Normalized the macro METHOD to METHOD_INFO because in essence it actually defines a static method info store
 // Release v3.1.1:
 // 1. Change the macro CLASS in order to preserve some special assembly names from vs formatting, just like Assembly-CSharp
 // Release v3.1:
@@ -1157,6 +1159,6 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 #define STATIC_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name> name = {}
 #define STATIC_BACKING_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name, true> name = {}
 
-#define METHOD(parameterCount, returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_##parameterCount##_Method_Info__ = {}
+#define METHOD_INFO(parameterCount, returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_##parameterCount##_Method_Info__ = {}
 #undef TEXT
 #endif // !H_NARESOLVER
