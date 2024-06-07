@@ -1,7 +1,7 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.1						//
+// Version: v3.1.1						//
 // Branch: mono							//
 //**************************************//
 
