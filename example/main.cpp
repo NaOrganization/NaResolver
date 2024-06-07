@@ -49,16 +49,6 @@ namespace UnityEngine
 			}
 		};
 
-		// Name: MemoryUsageChangedCallback
-		// ClassType: Normal
-		// Flags: Famandassem | Assembly | Public
-		// Inheritance: MemoryUsageChangedCallback -> System::MulticastDelegate -> System::Delegate -> System::Object
-		class MemoryUsageChangedCallback
-		{
-		public:
-			NESTED_CLASS(Application, MemoryUsageChangedCallback);
-		};
-
 		// Name: LogCallback
 		// ClassType: Normal
 		// Flags: Famandassem | Assembly | Public
@@ -70,7 +60,6 @@ namespace UnityEngine
 		};
 
 		STATIC_FIELD(UnityEngine::Application::LowMemoryCallback*, lowMemory);
-		STATIC_FIELD(UnityEngine::Application::MemoryUsageChangedCallback*, memoryUsageChanged);
 		STATIC_FIELD(UnityEngine::Application::LogCallback*, s_LogCallbackHandler);
 		STATIC_FIELD(UnityEngine::Application::LogCallback*, s_LogCallbackHandlerThreaded);
 		STATIC_FIELD(void*, focusChanged);
