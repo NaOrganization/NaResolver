@@ -1,7 +1,7 @@
 //**************************************//
 // Hi NaResolver						//
 // Author: NaOrganization				//
-// Version: v3.1.1						//
+// Version: v3.1.2						//
 // Branch: mono							//
 //**************************************//
 
@@ -1165,6 +1165,6 @@ NaResolver::Method NaResolver::GetMethod(Class parent, const std::string& return
 #define STATIC_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name> name = {}
 #define STATIC_BACKING_FIELD(type, name) inline static Template::StaticMemberField<__This_Class_Type__, type, #name, true> name = {}
 
-#define METHOD(parameterCount, returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_##parameterCount##_Method_Info__ = {}
+#define METHOD_INFO(parameterCount, returnType, methodName, ...) inline static constexpr Template::MemberMethodInfo<__This_Class_Type__, returnType, #methodName, __VA_ARGS__> __##methodName##_##parameterCount##_Method_Info__ = {}
 #undef TEXT
 #endif // !H_NARESOLVER
