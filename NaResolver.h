@@ -681,7 +681,7 @@ NaResolver::Class Template::NestedClassInfo<Declaring, Name>::Instance()
 template<typename Declaring, Template::StringLiteral Name, bool IsBacking>
 VmGeneralType::Field Template::MemberFieldInfo<Declaring, Name, IsBacking>::GetFieldInfo()
 {
-	if (FieldInfoCache.fieldInfo == nullptr)
+	if (FieldInfoCache.fieldInfo != nullptr)
 		return FieldInfoCache;
 	return FieldInfoCache = DeclaringClass.Instance().klass.GetField(FieldName);
 }
