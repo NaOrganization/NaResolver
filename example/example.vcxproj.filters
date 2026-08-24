@@ -20,7 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\NaResolver.h">
+    <ClInclude Include="..\KrOr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\UniResolver.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
