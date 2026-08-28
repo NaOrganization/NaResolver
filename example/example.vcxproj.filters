@@ -26,5 +26,11 @@
     <ClInclude Include="..\UniResolver.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\VmApi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UniDumperSdk.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

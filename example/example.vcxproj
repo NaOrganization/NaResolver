@@ -140,6 +140,8 @@
   <ItemGroup>
     <ClInclude Include="..\KrOr.h" />
     <ClInclude Include="..\UniResolver.h" />
+    <ClInclude Include="..\VmApi.h" />
+    <ClInclude Include="UniDumperSdk.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
