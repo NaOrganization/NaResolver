@@ -5,8 +5,8 @@ UniResolver 是一个面向 Windows IL2CPP 运行时的 C++20 仅头文件解析
 [English](README.en.md) · [宏与用法 Wiki](Wiki.md) · [示例工程](example)
 
 ## 特点
-- Slowly到此一游
-- 直接使用 UniDumper 生成的 C++ SDK 声明。
+
+- 直接使用 UniDumper 生成的 C++ SDK 声明 。
 - 按 assembly、namespace、类型名或 metadata token 延迟解析并缓存结果。
 - 通过 `il2cpp_runtime_invoke` 调用方法，支持实例方法、虚方法和托管异常。
 - `std::string` 与 IL2CPP `String` 自动转换。
